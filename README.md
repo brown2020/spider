@@ -59,7 +59,7 @@ To run this project locally, follow these steps:
 
 ## Components
 
-### 1. `Spider.tsx`
+### Spider.tsx
 
 This component renders the animated spider and handles the dynamic sprite positioning.
 
@@ -119,9 +119,7 @@ const Spider: React.FC<SpiderProps> = ({ top, left, crawling, direction }) => {
 export default Spider;
 ```
 
-````
-
-### 2. `SpiderCrawl.tsx`
+### SpiderCrawl.tsx
 
 This component handles the logic for the spider's movement and keyboard controls.
 
@@ -223,27 +221,14 @@ export default function SpiderCrawl() {
 
 ## Credits
 
-### Sprite Sheet
-
 - The spider sprite sheet used in this demo was created by **Tuomo Untinen** and can be found at [OpenGameArt.org](https://opengameart.org/content/giant-spider-32x32).
 - **License**: [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)
 - **Attribution**: Spider made by Tuomo Untinen
-
-### Project
-
-- Created by [brown2020](https://github.com/brown2020)
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-```
+## Author
 
-### Key Points
-
-- **Demo**: Add a link to your live demo if you deploy the project.
-- **Installation and Usage**: Clear instructions are provided for cloning the repo, installing dependencies, and running the project locally.
-- **Credits**: Proper attribution to the sprite sheet creator.
-- **License**: MIT License information (if you use it).
-
-````
+Created by [brown2020](https://github.com/brown2020).
