@@ -4,7 +4,7 @@ A simple demo project that illustrates how to use a sprite sheet to create anima
 
 ## Demo
 
-You can view a live demo of the project [here](#).
+You can view a live demo of the project [here](https://spiderdemo.vercel.app/).
 
 ## Purpose
 
@@ -232,3 +232,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Author
 
 Created by [brown2020](https://github.com/brown2020).
+
+## Contact
+
+For any inquiries, please contact me at [info@ignitechannel.com](mailto:info@ignitechannel.com).
