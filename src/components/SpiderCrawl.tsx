@@ -8,6 +8,7 @@ export default function SpiderCrawl() {
   const [direction, setDirection] = useState<"up" | "down" | "left" | "right">(
     "up"
   );
+  const [showInstructions, setShowInstructions] = useState(true);
 
   const handleKeyPress = (event: KeyboardEvent) => {
     if (crawling) return; // Prevent movement if already crawling
@@ -29,6 +30,7 @@ export default function SpiderCrawl() {
         return;
     }
     setCrawling(true);
+    setShowInstructions(false); // Hide instructions once movement starts
   };
 
   useEffect(() => {
@@ -38,8 +40,7 @@ export default function SpiderCrawl() {
     const scale = 5; // Scale factor
     const scaledSpiderSize = spiderSize * scale; // Scaled size of the spider
 
-    // Allow spider to get closer to the edge by using a fraction of the scaled size
-    const marginFraction = 0.25; // Adjust this value to allow closer edges (0.25 means 25%)
+    const marginFraction = 0.25; // Allow closer edges
     const minMargin =
       ((scaledSpiderSize * marginFraction) / window.innerHeight) * 100; // Convert to percentage
     const maxMargin = 100 - minMargin; // Maximum position accounting for the spider size
@@ -48,7 +49,6 @@ export default function SpiderCrawl() {
       setPosition((prev) => {
         const newPosition = { ...prev };
 
-        // Update position based on direction with adjusted constraints
         if (direction === "up")
           newPosition.top = Math.max(minMargin, prev.top - 1);
         if (direction === "down")
@@ -82,6 +82,11 @@ export default function SpiderCrawl() {
 
   return (
     <div className="relative w-screen h-screen bg-black overflow-hidden">
+      {showInstructions && (
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 text-white text-lg bg-gray-800 p-2 rounded">
+          Use the arrow keys to move the spider!
+        </div>
+      )}
       <Spider
         top={position.top}
         left={position.left}
