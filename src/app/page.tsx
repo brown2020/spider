@@ -1,5 +1,6 @@
-import SpiderCrawl from "@/components/SpiderCrawl";
+// app/page.tsx
+import ClientWrapper from "@/components/ClientWrapper";
 
-export default function HomePage() {
-  return <SpiderCrawl />;
+export default function Home() {
+  return <ClientWrapper />;
 }

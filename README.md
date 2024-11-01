@@ -1,238 +1,127 @@
-# 🕷️ Spider
+# Spider Game 🕷️
 
-A simple demo project that illustrates how to use a sprite sheet to create animations and handle controls in a web application. This project uses a spider sprite sheet to animate the spider's movement in four directions, allowing users to control the spider using keyboard arrow keys.
+A web-based spider platformer game built with Next.js 15, React, and TypeScript. Control a spider as it moves around the screen, catches prey, and navigates a starlit environment.
 
-## Demo
-
-You can view a live demo of the project [here](https://spiderdemo.vercel.app/).
-
-## Purpose
-
-The purpose of this project is to demonstrate:
-
-- How to use a sprite sheet for character animation in a web application.
-- How to control animations using keyboard input.
-- How to dynamically adjust sprite positions and prevent the sprite from moving off-screen.
+🎮 **[Play Now](https://spiderdemo.vercel.app/)**
 
 ## Features
 
-- **Sprite Animation**: Uses a sprite sheet to animate a spider character in four different directions (up, down, left, right).
-- **Keyboard Controls**: Allows user control of the spider's movement with arrow keys.
-- **Responsive Movement**: Dynamically calculates boundaries to prevent the spider from moving off-screen, while maintaining a smooth animation experience.
+- Smooth spider movement with pixel-perfect sprite animations
+- Physics-based jumping and movement mechanics
+- Dynamic prey spawning and catching system
+- Responsive design that adapts to window size
+- Particle effects and ambient star animations
+- Score tracking and web energy system
+- Starlit background with dynamic animations
 
-## Technologies Used
+## 🎮 Controls
 
-- **React**: For building the interactive UI components.
-- **TypeScript**: For type safety and clarity.
-- **Tailwind CSS**: For styling and responsive design.
-- **HTML/CSS**: For layout and animation control.
+- **Arrow Keys**: Move the spider
+- **Spacebar**: Jump
+- **Shift + Arrow Keys**: Run faster
+- **ESC**: Pause game
 
-## Installation
+## 🛠️ Technologies Used
 
-To run this project locally, follow these steps:
+- Next.js 15
+- React 18
+- TypeScript
+- Tailwind CSS
+- React Hooks for game logic
+- CSS Animations
 
-1. **Clone the repository**:
+## 🚀 Getting Started
 
-   ```bash
-   git clone https://github.com/brown2020/spider.git
-   cd spider
-   ```
+### Prerequisites
 
-2. **Install dependencies**:
+- Node.js 18.0 or higher
+- npm or yarn package manager
 
-   ```bash
-   npm install
-   ```
+### Installation
 
-3. **Run the development server**:
+1. Clone the repository:
 
-   ```bash
-   npm run dev
-   ```
-
-4. Open your browser and navigate to `http://localhost:3000` to see the project in action.
-
-## Usage
-
-- Use the **Arrow Keys** (`↑`, `↓`, `←`, `→`) to control the spider's movement.
-- The spider will animate in the direction of movement based on the sprite sheet.
-
-## Components
-
-### Spider.tsx
-
-This component renders the animated spider and handles the dynamic sprite positioning.
-
-```tsx
-import React, { useEffect, useState } from "react";
-
-interface SpiderProps {
-  top: number;
-  left: number;
-  crawling: boolean;
-  direction: "up" | "down" | "left" | "right";
-}
-
-const Spider: React.FC<SpiderProps> = ({ top, left, crawling, direction }) => {
-  const [movementState, setMovementState] = useState(0);
-
-  useEffect(() => {
-    if (crawling) {
-      const interval = setInterval(() => {
-        setMovementState((prev) => (prev + 1) % 3); // 3 frames for walking animation
-      }, 150);
-
-      return () => clearInterval(interval);
-    }
-  }, [crawling, direction]);
-
-  const getBackgroundPosition = () => {
-    const frameWidth = 32;
-    const frameHeight = 32;
-
-    const xOffset = movementState * frameWidth;
-
-    const yOffset = {
-      down: 0,
-      left: -frameHeight,
-      right: -2 * frameHeight,
-      up: -3 * frameHeight,
-    }[direction];
-
-    return `-${xOffset}px ${yOffset}px`;
-  };
-
-  return (
-    <div
-      className="absolute spider"
-      style={{
-        top: `${top}%`,
-        left: `${left}%`,
-        transform: "translate(-50%, -50%) scale(5)",
-        backgroundPosition: getBackgroundPosition(),
-        filter: "brightness(6) contrast(2)",
-      }}
-    />
-  );
-};
-
-export default Spider;
+```bash
+git clone https://github.com/brown2020/spider.git
+cd spider
 ```
 
-### SpiderCrawl.tsx
+2. Install dependencies:
 
-This component handles the logic for the spider's movement and keyboard controls.
-
-```tsx
-"use client";
-import { useEffect, useState } from "react";
-import Spider from "./Spider";
-
-export default function SpiderCrawl() {
-  const [position, setPosition] = useState({ top: 50, left: 50 });
-  const [crawling, setCrawling] = useState(false);
-  const [direction, setDirection] = useState<"up" | "down" | "left" | "right">(
-    "up"
-  );
-
-  const handleKeyPress = (event: KeyboardEvent) => {
-    if (crawling) return; // Prevent movement if already crawling
-
-    switch (event.key) {
-      case "ArrowUp":
-        setDirection("up");
-        break;
-      case "ArrowDown":
-        setDirection("down");
-        break;
-      case "ArrowLeft":
-        setDirection("left");
-        break;
-      case "ArrowRight":
-        setDirection("right");
-        break;
-      default:
-        return;
-    }
-    setCrawling(true);
-  };
-
-  useEffect(() => {
-    if (!crawling) return;
-
-    const spiderSize = 32; // Original size of the spider in pixels
-    const scale = 5; // Scale factor
-    const scaledSpiderSize = spiderSize * scale; // Scaled size of the spider
-
-    // Allow spider to get closer to the edge by using a fraction of the scaled size
-    const marginFraction = 0.25; // Adjust this value to allow closer edges (0.25 means 25%)
-    const minMargin =
-      ((scaledSpiderSize * marginFraction) / window.innerHeight) * 100; // Convert to percentage
-    const maxMargin = 100 - minMargin; // Maximum position accounting for the spider size
-
-    const crawl = setInterval(() => {
-      setPosition((prev) => {
-        const newPosition = { ...prev };
-
-        // Update position based on direction with adjusted constraints
-        if (direction === "up")
-          newPosition.top = Math.max(minMargin, prev.top - 1);
-        if (direction === "down")
-          newPosition.top = Math.min(maxMargin, prev.top + 1);
-        if (direction === "left")
-          newPosition.left = Math.max(minMargin, prev.left - 1);
-        if (direction === "right")
-          newPosition.left = Math.min(maxMargin, prev.left + 1);
-
-        return newPosition;
-      });
-    }, 50); // Faster interval for smoother movement
-
-    const stopCrawl = setTimeout(() => {
-      setCrawling(false);
-      clearInterval(crawl);
-    }, 600); // Duration of the crawl
-
-    return () => {
-      clearInterval(crawl);
-      clearTimeout(stopCrawl);
-    };
-  }, [crawling, direction]);
-
-  useEffect(() => {
-    window.addEventListener("keydown", handleKeyPress);
-    return () => {
-      window.removeEventListener("keydown", handleKeyPress);
-    };
-  }, []);
-
-  return (
-    <div className="relative w-screen h-screen bg-black overflow-hidden">
-      <Spider
-        top={position.top}
-        left={position.left}
-        crawling={crawling}
-        direction={direction}
-      />
-    </div>
-  );
-}
+```bash
+npm install
+# or
+yarn install
 ```
 
-## Credits
+3. Start the development server:
 
-- The spider sprite sheet used in this demo was created by **Tuomo Untinen** and can be found at [OpenGameArt.org](https://opengameart.org/content/giant-spider-32x32).
-- **License**: [CC-BY 3.0](https://creativecommons.org/licenses/by/3.0/)
-- **Attribution**: Spider made by Tuomo Untinen
+```bash
+npm run dev
+# or
+yarn dev
+```
 
-## License
+4. Open your browser and navigate to `http://localhost:3000`
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+## 🏗️ Project Structure
 
-## Author
+```
+src/
+├── app/
+│   └── page.tsx            # Main game page
+├── components/
+│   ├── game/
+│   │   ├── Spider.tsx      # Spider character component
+│   │   ├── GameContainer.tsx # Main game logic container
+│   │   ├── Environment.tsx # Background and effects
+│   │   └── Prey.tsx       # Prey spawning and behavior
+│   └── ui/
+│       ├── Menu.tsx       # Pause menu
+│       ├── Controls.tsx   # Controls overlay
+│       └── ScoreDisplay.tsx # Score and energy UI
+├── lib/
+│   ├── constants/
+│   │   ├── gameConfig.ts  # Game configuration
+│   │   └── sprites.ts     # Sprite animations config
+│   ├── hooks/
+│   │   ├── useGameLoop.ts # Game loop logic
+│   │   ├── useCollision.ts # Collision detection
+│   │   └── useControls.ts # Input handling
+│   ├── types/
+│   │   └── game.ts       # TypeScript definitions
+│   └── utils/
+│       ├── physics.ts    # Physics calculations
+│       ├── animation.ts  # Animation utilities
+│       └── sound.ts      # Sound management
+└── styles/
+    └── game.css          # Game-specific styles
+```
 
-Created by [brown2020](https://github.com/brown2020).
+## 🗺️ Roadmap
 
-## Contact
+- [ ] Add web shooting mechanics
+- [ ] Implement touch controls for mobile
+- [ ] Add sound effects and background music
+- [ ] Create level system
+- [ ] Add more prey types
+- [ ] Implement multiplayer support
 
-For any inquiries, please contact me at [info@ignitechannel.com](mailto:info@ignitechannel.com).
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+## 📧 Contact
+
+info@ignitechannel.com
+
+Project Link: [https://github.com/brown2020/spider](https://github.com/brown2020/spider)  
+Live Demo: [https://spiderdemo.vercel.app/](https://spiderdemo.vercel.app/)

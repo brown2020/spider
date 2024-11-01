@@ -1,13 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-.spider {
-  width: 32px; /* Original width of a single frame */
-  height: 32px; /* Original height of a single frame */
-  background-image: url("/assets/spider.png"); /* Path to your sprite sheet */
-  background-repeat: no-repeat;
-  position: absolute;
-  background-size: auto; /* Keep the original size of the sprite sheet */
-  transform-origin: center; /* Ensure scaling is around the center */
-}

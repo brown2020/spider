@@ -1,0 +1,118 @@
+/* styles/game.css */
+.spider {
+  width: 32px;
+  height: 32px;
+  background-image: url("/spider-sprite.png");
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  position: absolute;
+  pointer-events: none;
+}
+
+.platform {
+  background: linear-gradient(to bottom, #4a5568, #2d3748);
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.web {
+  position: absolute;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.8),
+    transparent
+  );
+  transform-origin: left;
+  transition: opacity 0.3s;
+}
+
+.particle {
+  position: absolute;
+  pointer-events: none;
+  animation: fade-out 0.5s ease-out forwards;
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Fade in animation for menu */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Scale up animation for menu content */
+@keyframes scaleUp {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* UI element styles */
+.menu-overlay {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.menu-content {
+  animation: scaleUp 0.2s ease-out;
+}
+
+/* Energy bar pulse animation */
+@keyframes energyPulse {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+.energy-bar-low {
+  animation: energyPulse 1s ease-in-out infinite;
+}
+
+/* Score popup animation */
+@keyframes scorePopup {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.score-change {
+  animation: scorePopup 0.3s ease-out;
+}
