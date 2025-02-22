@@ -15,7 +15,7 @@ const Menu: React.FC<MenuProps> = ({ onResume }) => {
         <div className="space-y-4">
           <button
             onClick={onResume}
-            className="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded transition"
+            className="w-full px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-sm transition"
           >
             Resume Game
           </button>

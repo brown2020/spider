@@ -41,7 +41,7 @@ const Environment: React.FC<EnvironmentProps> = ({ dimensions }) => {
     <div className="absolute inset-0">
       {/* Background with gradient */}
       <div
-        className="absolute inset-0 bg-gradient-to-b from-gray-900 to-gray-800"
+        className="absolute inset-0 bg-linear-to-b from-gray-900 to-gray-800"
         style={{
           width: dimensions.width,
           height: dimensions.height,
@@ -65,7 +65,7 @@ const Environment: React.FC<EnvironmentProps> = ({ dimensions }) => {
 
       {/* Ground shadow */}
       <div
-        className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent"
+        className="absolute bottom-0 left-0 right-0 bg-linear-to-t from-black to-transparent"
         style={{
           height: "150px",
           opacity: 0.3,

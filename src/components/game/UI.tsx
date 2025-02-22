@@ -10,13 +10,13 @@ const UI: React.FC<UIProps> = ({ gameState }) => {
   return (
     <div className="fixed inset-0 pointer-events-none">
       {/* Score Display */}
-      <div className="absolute top-4 left-4 bg-black bg-opacity-50 p-2 rounded text-white">
+      <div className="absolute top-4 left-4 bg-black bg-opacity-50 p-2 rounded-sm text-white">
         <div>Score: {gameState.score}</div>
         <div>Web Energy: {gameState.webEnergy}%</div>
       </div>
 
       {/* Controls Help */}
-      <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 p-2 rounded text-white text-sm">
+      <div className="absolute bottom-4 right-4 bg-black bg-opacity-50 p-2 rounded-sm text-white text-sm">
         <div>Arrow Keys: Move</div>
         <div>Shift: Run</div>
         <div>Space: Jump</div>

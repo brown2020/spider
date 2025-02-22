@@ -10,14 +10,14 @@ const Controls: React.FC = () => {
     return (
       <button
         onClick={() => setShowControls(true)}
-        className="fixed bottom-4 right-4 bg-gray-800 text-white px-3 py-1 rounded opacity-50 hover:opacity-100 transition"
+        className="fixed bottom-4 right-4 bg-gray-800 text-white px-3 py-1 rounded-sm opacity-50 hover:opacity-100 transition"
       >
         Show Controls
       </button>
     );
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded shadow-lg">
+    <div className="fixed bottom-4 right-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded-sm shadow-lg">
       <button
         onClick={() => setShowControls(false)}
         className="absolute top-2 right-2 text-gray-400 hover:text-white"

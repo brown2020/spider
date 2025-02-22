@@ -230,7 +230,7 @@ const GameContainer: React.FC = () => {
       {isPaused && <Menu onResume={() => setIsPaused(false)} />}
 
       {showDebug && (
-        <div className="fixed top-4 right-4 text-white bg-black bg-opacity-50 p-2 rounded z-50">
+        <div className="fixed top-4 right-4 text-white bg-black bg-opacity-50 p-2 rounded-sm z-50">
           <div>Position: {JSON.stringify(gameState.position)}</div>
           <div>Velocity: {JSON.stringify(gameState.velocity)}</div>
           <div>Direction: {gameState.direction}</div>

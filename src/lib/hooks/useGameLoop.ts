@@ -5,7 +5,7 @@ import { GAME_CONFIG } from "../constants/gameConfig";
 
 export const useGameLoop = (initialState: GameState) => {
   const [gameState, setGameState] = useState<GameState>(initialState);
-  const frameRef = useRef<number>();
+  const frameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
 
   useEffect(() => {
