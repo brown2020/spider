@@ -24,6 +24,7 @@ const Menu: React.FC<MenuProps> = ({ onResume }) => {
             <p>Arrow Keys - Move</p>
             <p>Space - Jump</p>
             <p>Shift - Run</p>
+            <p>Mouse Click - Shoot Web</p>
             <p>ESC - Pause</p>
           </div>
         </div>

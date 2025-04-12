@@ -20,7 +20,7 @@ export const GAME_CONFIG = {
   web: {
     maxLength: 300,
     duration: 5000,
-    thickness: 2,
+    thickness: 1.5,
     maxActive: 5,
     energy: {
       max: 100,
@@ -29,7 +29,7 @@ export const GAME_CONFIG = {
     },
   },
   prey: {
-    speed: 2,
+    speed: 3.5,
     size: 16,
     value: 100,
     spawnRate: 3000,

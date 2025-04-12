@@ -17,7 +17,7 @@ const Controls: React.FC = () => {
     );
 
   return (
-    <div className="fixed bottom-4 right-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded-sm shadow-lg">
+    <div className="fixed bottom-4 right-4 bg-gray-800 bg-opacity-90 text-white p-4 rounded-sm shadow-lg z-50">
       <button
         onClick={() => setShowControls(false)}
         className="absolute top-2 right-2 text-gray-400 hover:text-white"
@@ -29,6 +29,7 @@ const Controls: React.FC = () => {
         <li>↑↓←→ - Move</li>
         <li>Space - Jump</li>
         <li>Shift - Run</li>
+        <li>Mouse Click - Shoot Web</li>
         <li>ESC - Pause</li>
       </ul>
     </div>

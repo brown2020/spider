@@ -1,8 +1,8 @@
 // components/game/GameContainer.tsx
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { GameState } from "@/lib/types/game";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import { GameState, Web } from "@/lib/types/game";
 import { GAME_CONFIG } from "@/lib/constants/gameConfig";
 import Spider from "./Spider";
 import Environment from "./Environment";
@@ -11,6 +11,13 @@ import Prey from "./Prey";
 import Menu from "../ui/Menu";
 import Controls from "../ui/Controls";
 import ScoreDisplay from "../ui/ScoreDisplay";
+
+// Helper function to generate unique IDs
+const generateUniqueId = (): string => {
+  return (
+    Date.now().toString() + "-" + Math.random().toString(36).substring(2, 9)
+  );
+};
 
 const getInitialState = (): GameState => ({
   position: {
@@ -31,12 +38,81 @@ const GameContainer: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(getInitialState());
   const [isPaused, setIsPaused] = useState(false);
   const [showDebug] = useState(true);
+  const [webs, setWebs] = useState<Web[]>([]);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const lastWebUpdateTime = useRef<number>(0);
+
+  // Force clean web state at startup
+  useEffect(() => {
+    // Initialize with empty webs array
+    setWebs([]);
+  }, []);
 
   const setGameStateCallback = useCallback<
     React.Dispatch<React.SetStateAction<GameState>>
   >((newState) => {
     setGameState(newState);
   }, []);
+
+  // Track mouse position
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    setMousePosition({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  // Handle mouse click for web shooting
+  const handleMouseDown = useCallback(
+    (e: MouseEvent) => {
+      if (isPaused) return;
+
+      setGameState((prev) => {
+        // Only shoot if we have enough energy
+        if (prev.webEnergy < GAME_CONFIG.web.energy.shootCost) return prev;
+
+        const newWeb: Web = {
+          id: generateUniqueId(),
+          startPos: { x: prev.position.x, y: prev.position.y },
+          endPos: { x: e.clientX, y: e.clientY },
+          lifetime: GAME_CONFIG.web.duration,
+          createdAt: Date.now(),
+        };
+
+        // Add the new web to the webs array
+        setWebs((prevWebs) => [...prevWebs]);
+
+        // Use setTimeout to ensure the state update happens
+        setTimeout(() => {
+          setWebs((prevWebs) => [...prevWebs, newWeb]);
+        }, 0);
+
+        return {
+          ...prev,
+          isWebShooting: true,
+          webEnergy: prev.webEnergy - GAME_CONFIG.web.energy.shootCost,
+        };
+      });
+    },
+    [isPaused]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setGameState((prev) => ({
+      ...prev,
+      isWebShooting: false,
+    }));
+  }, []);
+
+  // Set up mouse controls
+  useEffect(() => {
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mousedown", handleMouseDown);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mousedown", handleMouseDown);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [handleMouseMove, handleMouseDown, handleMouseUp]);
 
   // Handle keyboard controls
   const handleKeyDown = useCallback(
@@ -192,6 +268,26 @@ const GameContainer: React.FC = () => {
 
         return newState;
       });
+
+      // Only update webs every 100ms to prevent too frequent updates
+      const now = Date.now();
+      if (now - lastWebUpdateTime.current > 100) {
+        lastWebUpdateTime.current = now;
+
+        // Update webs - remove expired webs
+        setWebs((prevWebs) => {
+          // If no webs, just return empty array
+          if (!prevWebs || prevWebs.length === 0) return [];
+
+          // Filter out expired webs
+          const activeWebs = prevWebs.filter((web) => {
+            const timeRemaining = web.lifetime - (now - web.createdAt);
+            return timeRemaining > 0;
+          });
+
+          return activeWebs;
+        });
+      }
     }, 1000 / 60); // 60 FPS
 
     return () => clearInterval(gameLoop);
@@ -214,6 +310,25 @@ const GameContainer: React.FC = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Clean up old webs periodically
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      setWebs((prevWebs) => {
+        // If no webs, just return empty array
+        if (!prevWebs || prevWebs.length === 0) return [];
+
+        // Filter out expired webs
+        return prevWebs.filter((web) => {
+          const timeRemaining = web.lifetime - (now - web.createdAt);
+          return timeRemaining > 0;
+        });
+      });
+    }, 1000); // Check every second
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
+
   return (
     <div className="fixed inset-0 w-screen h-screen bg-black overflow-hidden">
       <Environment
@@ -222,10 +337,73 @@ const GameContainer: React.FC = () => {
           height: window.innerHeight,
         }}
       />
+
+      {/* Render webs */}
+      {webs.length > 0 &&
+        webs.map((web) => {
+          const now = Date.now();
+          const timeElapsed = now - web.createdAt;
+          const timeRemaining = web.lifetime - timeElapsed;
+
+          // Skip rendering if web is expired
+          if (timeRemaining <= 0) return null;
+
+          const opacity = Math.max(0.2, 1 - timeElapsed / web.lifetime);
+
+          return (
+            <div
+              key={web.id}
+              className="absolute bg-white"
+              style={{
+                left: web.startPos.x,
+                top: web.startPos.y,
+                width: Math.hypot(
+                  web.endPos.x - web.startPos.x,
+                  web.endPos.y - web.startPos.y
+                ),
+                height: GAME_CONFIG.web.thickness,
+                transformOrigin: "left center",
+                transform: `rotate(${Math.atan2(
+                  web.endPos.y - web.startPos.y,
+                  web.endPos.x - web.startPos.x
+                )}rad)`,
+                opacity: opacity,
+                zIndex: 1000,
+              }}
+            />
+          );
+        })}
+
       <Spider gameState={gameState} />
-      <Prey gameState={gameState} setGameState={setGameStateCallback} />
+      <Prey
+        gameState={gameState}
+        setGameState={setGameStateCallback}
+        webs={webs}
+      />
       <ScoreDisplay score={gameState.score} webEnergy={gameState.webEnergy} />
       <Controls />
+
+      {/* Web aiming line when mouse is moved */}
+      {!isPaused && gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost && (
+        <div
+          className="absolute bg-white opacity-30"
+          style={{
+            left: gameState.position.x,
+            top: gameState.position.y,
+            width: Math.hypot(
+              mousePosition.x - gameState.position.x,
+              mousePosition.y - gameState.position.y
+            ),
+            height: 1,
+            transformOrigin: "left center",
+            transform: `rotate(${Math.atan2(
+              mousePosition.y - gameState.position.y,
+              mousePosition.x - gameState.position.x
+            )}rad)`,
+            zIndex: 999,
+          }}
+        />
+      )}
 
       {isPaused && <Menu onResume={() => setIsPaused(false)} />}
 
@@ -236,6 +414,8 @@ const GameContainer: React.FC = () => {
           <div>Direction: {gameState.direction}</div>
           <div>Jumping: {gameState.isJumping.toString()}</div>
           <div>Crawling: {gameState.isCrawling.toString()}</div>
+          <div>Web Energy: {Math.floor(gameState.webEnergy)}%</div>
+          <div>Active Webs: {webs.length}</div>
         </div>
       )}
     </div>
