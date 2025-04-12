@@ -20,7 +20,6 @@ interface PreyProps {
 
 const Prey: React.FC<PreyProps> = ({ gameState, setGameState, webs }) => {
   const [preyList, setPreyList] = useState<PreyType[]>([]);
-  const [debugCollision, setDebugCollision] = useState(false);
 
   // When there are no webs, free all trapped prey
   useEffect(() => {
@@ -300,6 +299,7 @@ const Prey: React.FC<PreyProps> = ({ gameState, setGameState, webs }) => {
     handlePreyCollision,
     checkWebCollision,
     updatePosition,
+    webs,
   ]);
 
   return (
