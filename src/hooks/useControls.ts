@@ -15,6 +15,7 @@ interface UseControlsProps {
     setWebs: React.Dispatch<React.SetStateAction<Web[]>>;
     isPaused: boolean;
     setIsPaused: React.Dispatch<React.SetStateAction<boolean>>;
+    zipTo: (target: { x: number; y: number }) => void;
 }
 
 export const useControls = ({
@@ -23,6 +24,7 @@ export const useControls = ({
     setWebs,
     isPaused,
     setIsPaused,
+    zipTo,
 }: UseControlsProps) => {
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
@@ -31,39 +33,48 @@ export const useControls = ({
         setMousePosition({ x: e.clientX, y: e.clientY });
     }, []);
 
-    // Handle mouse click for web shooting
+    // Handle mouse click for web shooting and zipping
     const handleMouseDown = useCallback(
         (e: MouseEvent) => {
             if (isPaused) return;
 
-            setGameState((prev) => {
-                // Only shoot if we have enough energy
-                if (prev.webEnergy < GAME_CONFIG.web.energy.shootCost) return prev;
+            // Right click or Shift+Click for Zip
+            if (e.button === 2 || (e.button === 0 && e.shiftKey)) {
+                zipTo({ x: e.clientX, y: e.clientY });
+                return;
+            }
 
-                const newWeb: Web = {
-                    id: generateUniqueId(),
-                    startPos: { x: prev.position.x, y: prev.position.y },
-                    endPos: { x: e.clientX, y: e.clientY },
-                    lifetime: GAME_CONFIG.web.duration,
-                    createdAt: Date.now(),
-                };
+            // Left click for Web Shot
+            if (e.button === 0) {
+                setGameState((prev) => {
+                    // Only shoot if we have enough energy
+                    if (prev.webEnergy < GAME_CONFIG.web.energy.shootCost) return prev;
 
-                // Add the new web to the webs array
-                setWebs((prevWebs) => [...prevWebs]);
+                    const newWeb: Web = {
+                        id: generateUniqueId(),
+                        startPos: { x: prev.position.x, y: prev.position.y },
+                        endPos: { x: e.clientX, y: e.clientY },
+                        lifetime: GAME_CONFIG.web.duration,
+                        createdAt: Date.now(),
+                    };
 
-                // Use setTimeout to ensure the state update happens
-                setTimeout(() => {
-                    setWebs((prevWebs) => [...prevWebs, newWeb]);
-                }, 0);
+                    // Add the new web to the webs array
+                    setWebs((prevWebs) => [...prevWebs]);
 
-                return {
-                    ...prev,
-                    isWebShooting: true,
-                    webEnergy: prev.webEnergy - GAME_CONFIG.web.energy.shootCost,
-                };
-            });
+                    // Use setTimeout to ensure the state update happens
+                    setTimeout(() => {
+                        setWebs((prevWebs) => [...prevWebs, newWeb]);
+                    }, 0);
+
+                    return {
+                        ...prev,
+                        isWebShooting: true,
+                        webEnergy: prev.webEnergy - GAME_CONFIG.web.energy.shootCost,
+                    };
+                });
+            }
         },
-        [isPaused, setGameState, setWebs]
+        [isPaused, setGameState, setWebs, zipTo]
     );
 
     const handleMouseUp = useCallback(() => {
@@ -72,6 +83,15 @@ export const useControls = ({
             isWebShooting: false,
         }));
     }, [setGameState]);
+
+    // Prevent context menu on right click
+    useEffect(() => {
+        const handleContextMenu = (e: MouseEvent) => {
+            e.preventDefault();
+        };
+        window.addEventListener("contextmenu", handleContextMenu);
+        return () => window.removeEventListener("contextmenu", handleContextMenu);
+    }, []);
 
     // Set up mouse controls
     useEffect(() => {

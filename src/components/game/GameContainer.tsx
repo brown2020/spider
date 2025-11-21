@@ -10,6 +10,7 @@ import Menu from "../ui/Menu";
 import Controls from "../ui/Controls";
 import ScoreDisplay from "../ui/ScoreDisplay";
 import Webs from "./Webs";
+import Particles from "./Particles";
 import DebugInfo from "./DebugInfo";
 import { useGame } from "@/hooks/useGame";
 import { useControls } from "@/hooks/useControls";
@@ -23,6 +24,7 @@ const GameContainer: React.FC = () => {
     webs,
     setWebs,
     preyList,
+    zipTo,
   } = useGame();
 
   const { mousePosition } = useControls({
@@ -31,6 +33,7 @@ const GameContainer: React.FC = () => {
     setWebs,
     isPaused,
     setIsPaused,
+    zipTo,
   });
 
   const [showDebug] = useState(true);
@@ -47,6 +50,7 @@ const GameContainer: React.FC = () => {
       {/* Render webs */}
       <Webs webs={webs} />
 
+      <Particles gameState={gameState} />
       <Spider gameState={gameState} />
       <Prey preyList={preyList} />
       <ScoreDisplay score={gameState.score} webEnergy={gameState.webEnergy} />

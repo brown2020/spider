@@ -63,6 +63,7 @@ export interface GameState {
   isRunning: boolean;
   isCrawling: boolean;
   isWebShooting: boolean;
+  isZipping: boolean;
   score: number;
   webEnergy: number;
 }

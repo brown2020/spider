@@ -9,6 +9,7 @@ interface Particle {
   size: number;
   lifetime: number;
   createdAt: number;
+  color: string;
 }
 
 interface ParticlesProps {
@@ -20,25 +21,33 @@ const Particles: React.FC<ParticlesProps> = ({ gameState }) => {
 
   // Create particles when spider is moving
   useEffect(() => {
-    if (gameState.isCrawling || gameState.isJumping) {
+    if (gameState.isCrawling || gameState.isJumping || gameState.isZipping) {
       const createParticle = () => {
+        const isZip = gameState.isZipping;
+
         const particle: Particle = {
           id: Math.random().toString(),
           position: { ...gameState.position },
           velocity: {
-            x: (Math.random() - 0.5) * 2,
-            y: (Math.random() - 0.5) * 2,
+            x: (Math.random() - 0.5) * (isZip ? 4 : 2),
+            y: (Math.random() - 0.5) * (isZip ? 4 : 2),
           },
-          size: Math.random() * 3 + 1,
-          lifetime: 500,
+          size: Math.random() * (isZip ? 5 : 3) + 1,
+          lifetime: isZip ? 300 : 500,
           createdAt: Date.now(),
+          color: isZip ? "rgba(100, 200, 255, 0.8)" : "rgba(255, 255, 255, 0.6)",
         };
         setParticles((prev) => [...prev, particle]);
       };
 
       createParticle();
+      // Create more particles if zipping
+      if (gameState.isZipping) {
+        createParticle();
+        createParticle();
+      }
     }
-  }, [gameState.position, gameState.isCrawling, gameState.isJumping]);
+  }, [gameState.position, gameState.isCrawling, gameState.isJumping, gameState.isZipping]);
 
   // Clean up expired particles
   useEffect(() => {
@@ -63,8 +72,11 @@ const Particles: React.FC<ParticlesProps> = ({ gameState }) => {
             top: particle.position.y,
             width: particle.size,
             height: particle.size,
-            backgroundColor: "rgba(255, 255, 255, 0.6)",
+            backgroundColor: particle.color,
             borderRadius: "50%",
+            position: "absolute",
+            pointerEvents: "none",
+            zIndex: 900,
           }}
         />
       ))}
