@@ -1,49 +1,21 @@
 // components/game/Spider.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React from "react";
 import { GameState } from "@/lib/types/game";
 import { GAME_CONFIG } from "@/lib/constants/gameConfig";
-import { AnimationController } from "@/lib/utils/animation";
+import { useSpriteAnimation } from "@/hooks/useSpriteAnimation";
 
 interface SpiderProps {
   gameState: GameState;
 }
 
 const Spider: React.FC<SpiderProps> = ({ gameState }) => {
-  const [currentFrame, setCurrentFrame] = useState(0);
-  const animationController = useRef<AnimationController>(
-    new AnimationController(
-      GAME_CONFIG.spider.animationFrames,
-      GAME_CONFIG.spider.animationSpeed
-    )
+  const currentFrame = useSpriteAnimation(
+    GAME_CONFIG.spider.animationFrames,
+    GAME_CONFIG.spider.animationSpeed,
+    gameState.isCrawling
   );
-  const frameInterval = useRef<number>(0);
-
-  useEffect(() => {
-    let lastTimestamp = 0;
-
-    const animate = (timestamp: number) => {
-      if (gameState.isCrawling) {
-        if (lastTimestamp === 0) lastTimestamp = timestamp;
-        const frame = animationController.current.update(timestamp);
-        setCurrentFrame(frame);
-      } else {
-        animationController.current.reset();
-        setCurrentFrame(0);
-      }
-
-      frameInterval.current = requestAnimationFrame(animate);
-    };
-
-    frameInterval.current = requestAnimationFrame(animate);
-
-    return () => {
-      if (frameInterval.current) {
-        cancelAnimationFrame(frameInterval.current);
-      }
-    };
-  }, [gameState.isCrawling]);
 
   const getBackgroundPosition = () => {
     const frameWidth = GAME_CONFIG.spider.spriteSize;
@@ -99,12 +71,10 @@ const Spider: React.FC<SpiderProps> = ({ gameState }) => {
         style={{
           bottom: `${GAME_CONFIG.physics.groundHeight - 5}px`,
           left: `${gameState.position.x}px`,
-          width: `${
-            GAME_CONFIG.spider.spriteSize * GAME_CONFIG.spider.scale * 0.8
-          }px`,
-          height: `${
-            GAME_CONFIG.spider.spriteSize * GAME_CONFIG.spider.scale * 0.2
-          }px`,
+          width: `${GAME_CONFIG.spider.spriteSize * GAME_CONFIG.spider.scale * 0.8
+            }px`,
+          height: `${GAME_CONFIG.spider.spriteSize * GAME_CONFIG.spider.scale * 0.2
+            }px`,
           transform: "translate(-50%, 0)",
           filter: "blur(2px)",
           zIndex: 1000,
