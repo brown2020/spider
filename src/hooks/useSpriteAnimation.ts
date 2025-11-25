@@ -1,41 +1,50 @@
-import { useState, useEffect, useRef } from "react";
-import { AnimationController } from "@/lib/utils/animation";
+'use client';
 
-export const useSpriteAnimation = (
-    frames: number,
-    speed: number,
-    isPlaying: boolean
-) => {
-    const [currentFrame, setCurrentFrame] = useState(0);
-    const animationController = useRef<AnimationController>(
-        new AnimationController(frames, speed)
-    );
-    const frameInterval = useRef<number>(0);
+import { useState, useEffect, useRef } from 'react';
 
-    useEffect(() => {
-        let lastTimestamp = 0;
+export function useSpriteAnimation(
+  frames: number,
+  speed: number,
+  isPlaying: boolean
+) {
+  const [currentFrame, setCurrentFrame] = useState(0);
+  const frameRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
+  const accumulatedTimeRef = useRef<number>(0);
 
-        const animate = (timestamp: number) => {
-            if (isPlaying) {
-                if (lastTimestamp === 0) lastTimestamp = timestamp;
-                const frame = animationController.current.update(timestamp);
-                setCurrentFrame(frame);
-            } else {
-                animationController.current.reset();
-                setCurrentFrame(0);
-            }
+  useEffect(() => {
+    if (!isPlaying) {
+      setCurrentFrame(0);
+      accumulatedTimeRef.current = 0;
+      return;
+    }
 
-            frameInterval.current = requestAnimationFrame(animate);
-        };
+    const animate = (timestamp: number) => {
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = timestamp;
+      }
 
-        frameInterval.current = requestAnimationFrame(animate);
+      const deltaTime = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
+      accumulatedTimeRef.current += deltaTime;
 
-        return () => {
-            if (frameInterval.current) {
-                cancelAnimationFrame(frameInterval.current);
-            }
-        };
-    }, [isPlaying]);
+      if (accumulatedTimeRef.current >= speed) {
+        setCurrentFrame((prev) => (prev + 1) % frames);
+        accumulatedTimeRef.current = accumulatedTimeRef.current % speed;
+      }
 
-    return currentFrame;
-};
+      frameRef.current = requestAnimationFrame(animate);
+    };
+
+    frameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (frameRef.current) {
+        cancelAnimationFrame(frameRef.current);
+      }
+      lastTimeRef.current = 0;
+    };
+  }, [isPlaying, frames, speed]);
+
+  return currentFrame;
+}

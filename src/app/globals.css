@@ -3,16 +3,20 @@
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  
+  /* Custom color palette - Midnight Forest */
+  --color-midnight: #0a0e17;
+  --color-deep-night: #0d1321;
+  --color-forest-shadow: #1a2332;
+  --color-mist: #2d3e50;
+  --color-moonlight: #e8eef5;
+  --color-spider-silk: #c4d4e6;
+  --color-firefly: #90ee90;
+  --color-ember: #ff6b35;
+  --color-mystic: #8b5cf6;
+  --color-aurora: #06b6d4;
 }
 
-/*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
 @layer base {
   *,
   ::after,
@@ -21,4 +25,352 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentColor);
   }
+  
+  body {
+    background-color: var(--color-midnight);
+    color: var(--color-moonlight);
+    overflow: hidden;
+    user-select: none;
+  }
+}
+
+/* Custom fonts */
+@font-face {
+  font-family: 'GameFont';
+  src: url('/fonts/GeistMonoVF.woff') format('woff');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+/* Atmospheric background gradient */
+.game-background {
+  background: 
+    radial-gradient(ellipse 80% 60% at 50% 100%, rgba(20, 40, 60, 0.6) 0%, transparent 60%),
+    radial-gradient(ellipse 100% 80% at 20% 0%, rgba(30, 60, 90, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 80% 20%, rgba(40, 20, 60, 0.2) 0%, transparent 40%),
+    linear-gradient(to bottom, 
+      #050810 0%, 
+      #0a1020 30%, 
+      #0d1428 60%, 
+      #101830 100%
+    );
+}
+
+/* Animated stars */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes twinkle-fast {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.9; }
+}
+
+@keyframes shooting-star {
+  0% { 
+    transform: translateX(0) translateY(0) rotate(-45deg);
+    opacity: 1;
+  }
+  100% { 
+    transform: translateX(300px) translateY(300px) rotate(-45deg);
+    opacity: 0;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px currentColor); }
+  50% { filter: drop-shadow(0 0 20px currentColor); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes score-popup {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-50px) scale(0.8);
+  }
+}
+
+@keyframes combo-flash {
+  0%, 100% { 
+    text-shadow: 0 0 10px rgba(255, 200, 0, 0.8);
+  }
+  50% { 
+    text-shadow: 0 0 30px rgba(255, 200, 0, 1), 0 0 60px rgba(255, 150, 0, 0.5);
+  }
+}
+
+@keyframes screen-shake {
+  0%, 100% { transform: translate(0, 0); }
+  10% { transform: translate(-2px, -2px); }
+  20% { transform: translate(2px, -2px); }
+  30% { transform: translate(-2px, 2px); }
+  40% { transform: translate(2px, 2px); }
+  50% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, -2px); }
+  70% { transform: translate(-2px, 2px); }
+  80% { transform: translate(2px, 2px); }
+  90% { transform: translate(-2px, -2px); }
+}
+
+@keyframes web-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes energy-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; box-shadow: 0 0 20px currentColor; }
+}
+
+@keyframes prey-flutter {
+  0%, 100% { transform: rotate(-5deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.05); }
+}
+
+@keyframes power-up-float {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg); 
+    filter: drop-shadow(0 0 15px currentColor);
+  }
+  50% { 
+    transform: translateY(-8px) rotate(5deg); 
+    filter: drop-shadow(0 0 25px currentColor);
+  }
+}
+
+/* Spider styling */
+.spider {
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: brightness(6) contrast(2);
+  transition: transform 0.15s ease-out;
+}
+
+/* Web styling with glow */
+.web-line {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 220, 255, 0.3) 10%,
+    rgba(200, 220, 255, 0.9) 50%,
+    rgba(200, 220, 255, 0.3) 90%,
+    transparent 100%
+  );
+  box-shadow: 
+    0 0 4px rgba(200, 220, 255, 0.6),
+    0 0 8px rgba(150, 180, 220, 0.4),
+    0 0 12px rgba(100, 150, 200, 0.2);
+}
+
+/* Particle effects */
+.particle {
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.particle-trail {
+  animation: fade-out 0.5s ease-out forwards;
+}
+
+.particle-catch {
+  animation: fade-out 0.6s ease-out forwards;
+}
+
+@keyframes fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* UI Styling */
+.game-ui {
+  font-family: 'GameFont', monospace;
+}
+
+.glass-panel {
+  background: linear-gradient(
+    135deg,
+    rgba(20, 30, 50, 0.9) 0%,
+    rgba(15, 25, 40, 0.95) 100%
+  );
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(100, 140, 200, 0.2);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Energy bar */
+.energy-bar {
+  background: linear-gradient(
+    90deg,
+    #1e3a5f 0%,
+    #2563eb 50%,
+    #60a5fa 100%
+  );
+  box-shadow: 
+    0 0 10px rgba(59, 130, 246, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.energy-bar-low {
+  animation: energy-pulse 1s ease-in-out infinite;
+  background: linear-gradient(
+    90deg,
+    #7f1d1d 0%,
+    #dc2626 50%,
+    #f87171 100%
+  );
+}
+
+/* Score display */
+.score-value {
+  font-variant-numeric: tabular-nums;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(100, 200, 255, 0.3);
+}
+
+.combo-display {
+  animation: combo-flash 0.5s ease-in-out infinite;
+}
+
+/* Button styling */
+.game-button {
+  background: linear-gradient(
+    135deg,
+    rgba(59, 130, 246, 0.8) 0%,
+    rgba(37, 99, 235, 0.9) 100%
+  );
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  box-shadow: 
+    0 4px 15px rgba(59, 130, 246, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.game-button:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(96, 165, 250, 0.9) 0%,
+    rgba(59, 130, 246, 1) 100%
+  );
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 20px rgba(59, 130, 246, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.game-button:active {
+  transform: translateY(0);
+}
+
+/* Prey styling */
+.prey-glow {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+/* Menu overlay */
+.menu-overlay {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(5, 10, 20, 0.85) 0%,
+    rgba(0, 0, 0, 0.95) 100%
+  );
+  animation: fade-in 0.3s ease-out;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Title styling */
+.game-title {
+  background: linear-gradient(
+    135deg,
+    #e8eef5 0%,
+    #94a3b8 50%,
+    #e8eef5 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+}
+
+/* Controls hint */
+.controls-hint {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.controls-hint kbd {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'GameFont', monospace;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 140, 200, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 140, 200, 0.6);
 }

@@ -1,89 +1,134 @@
-// components/game/GameContainer.tsx
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { GAME_CONFIG } from "@/lib/constants/gameConfig";
-import Spider from "./Spider";
-import Environment from "./Environment";
-import Prey from "./Prey";
-import Menu from "../ui/Menu";
-import Controls from "../ui/Controls";
-import ScoreDisplay from "../ui/ScoreDisplay";
-import Webs from "./Webs";
-import Particles from "./Particles";
-import DebugInfo from "./DebugInfo";
-import { useGame } from "@/hooks/useGame";
-import { useControls } from "@/hooks/useControls";
+import { useEffect } from 'react';
+import { useGameStore } from '@/stores/gameStore';
+import { useGameLoop, useControls } from '@/hooks/useGameLoop';
+import { GAME_CONFIG } from '@/lib/constants/gameConfig';
 
-const GameContainer: React.FC = () => {
-  const {
-    gameState,
-    setGameState,
-    isPaused,
-    setIsPaused,
-    webs,
-    setWebs,
-    preyList,
-    zipTo,
-  } = useGame();
+import Environment from './Environment';
+import Spider from './Spider';
+import Prey from './Prey';
+import Webs from './Webs';
+import Particles, { ScorePopups } from './Particles';
+import PowerUps from './PowerUps';
+import HUD from '../ui/HUD';
+import Menu from '../ui/Menu';
+import Controls from '../ui/Controls';
 
-  const { mousePosition } = useControls({
-    gameState,
-    setGameState,
-    setWebs,
-    isPaused,
-    setIsPaused,
-    zipTo,
-  });
-
-  const [showDebug] = useState(true);
-
+export default function GameContainer() {
+  // Use Zustand store
+  const gameState = useGameStore((state) => state.gameState);
+  const webs = useGameStore((state) => state.webs);
+  const preyList = useGameStore((state) => state.preyList);
+  const particles = useGameStore((state) => state.particles);
+  const scorePopups = useGameStore((state) => state.scorePopups);
+  const powerUps = useGameStore((state) => state.powerUps);
+  const mousePosition = useGameStore((state) => state.mousePosition);
+  const dimensions = useGameStore((state) => state.dimensions);
+  
+  const startGame = useGameStore((state) => state.startGame);
+  const pauseGame = useGameStore((state) => state.pauseGame);
+  const resumeGame = useGameStore((state) => state.resumeGame);
+  const resetGame = useGameStore((state) => state.resetGame);
+  
+  // Initialize game loops and controls
+  useGameLoop();
+  useControls();
+  
+  // Initialize dimensions on mount
+  useEffect(() => {
+    useGameStore.getState().setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+  }, []);
+  
+  const canShoot = gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost;
+  const isPlaying = gameState.gamePhase === 'playing';
+  
   return (
-    <div className="fixed inset-0 w-screen h-screen bg-black overflow-hidden">
-      <Environment
-        dimensions={{
-          width: typeof window !== "undefined" ? window.innerWidth : 1000,
-          height: typeof window !== "undefined" ? window.innerHeight : 500,
+    <div 
+      className={`fixed inset-0 w-screen h-screen overflow-hidden ${
+        gameState.screenShake > 0 ? 'screen-shake' : ''
+      }`}
+      style={{
+        cursor: isPlaying ? (canShoot ? 'crosshair' : 'not-allowed') : 'default',
+      }}
+    >
+      {/* Background layer */}
+      <Environment dimensions={dimensions} />
+      
+      {/* Game elements layer */}
+      <div className="absolute inset-0">
+        {/* Webs */}
+        <Webs webs={webs} />
+        
+        {/* Power-ups */}
+        <PowerUps powerUps={powerUps} />
+        
+        {/* Prey */}
+        <Prey preyList={preyList} />
+        
+        {/* Particles */}
+        <Particles particles={particles} />
+        <ScorePopups popups={scorePopups} />
+        
+        {/* Spider */}
+        <Spider gameState={gameState} />
+        
+        {/* Web aiming line */}
+        {isPlaying && canShoot && (
+          <AimLine 
+            from={gameState.position}
+            to={mousePosition}
+          />
+        )}
+      </div>
+      
+      {/* UI layer */}
+      {isPlaying && <HUD gameState={gameState} />}
+      {isPlaying && <Controls />}
+      
+      {/* Menu overlay */}
+      <Menu
+        gameState={gameState}
+        onStart={startGame}
+        onResume={resumeGame}
+        onRestart={() => {
+          resetGame();
+          startGame();
         }}
       />
-
-      {/* Render webs */}
-      <Webs webs={webs} />
-
-      <Particles gameState={gameState} />
-      <Spider gameState={gameState} />
-      <Prey preyList={preyList} />
-      <ScoreDisplay score={gameState.score} webEnergy={gameState.webEnergy} />
-      <Controls />
-
-      {/* Web aiming line when mouse is moved */}
-      {!isPaused && gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost && (
-        <div
-          className="absolute bg-white opacity-30"
-          style={{
-            left: gameState.position.x,
-            top: gameState.position.y,
-            width: Math.hypot(
-              mousePosition.x - gameState.position.x,
-              mousePosition.y - gameState.position.y
-            ),
-            height: 1,
-            transformOrigin: "left center",
-            transform: `rotate(${Math.atan2(
-              mousePosition.y - gameState.position.y,
-              mousePosition.x - gameState.position.x
-            )}rad)`,
-            zIndex: 999,
-          }}
-        />
-      )}
-
-      {isPaused && <Menu onResume={() => setIsPaused(false)} />}
-
-      {/* Use the memoized debug info component */}
-      {showDebug && <DebugInfo gameState={gameState} websCount={webs.length} />}
     </div>
   );
-};
+}
 
-export default GameContainer;
+interface AimLineProps {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+}
+
+function AimLine({ from, to }: AimLineProps) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx);
+  
+  // Don't show for very short distances
+  if (length < 20) return null;
+  
+  return (
+    <div
+      className="absolute aim-line pointer-events-none"
+      style={{
+        left: from.x,
+        top: from.y,
+        width: Math.min(length, 300),
+        height: 2,
+        transformOrigin: 'left center',
+        transform: `rotate(${angle}rad)`,
+        zIndex: 998,
+      }}
+    />
+  );
+}
