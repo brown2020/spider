@@ -928,3 +928,4 @@ function checkWebCollision(prey: { position: Vector2D }, webs: Web[]): boolean {
   return false;
 }
 
+

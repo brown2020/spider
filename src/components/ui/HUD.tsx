@@ -157,3 +157,4 @@ function PowerUpIndicator({ powerUp }: PowerUpIndicatorProps) {
 
 export default HUD;
 
+
