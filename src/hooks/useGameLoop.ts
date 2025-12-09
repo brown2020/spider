@@ -206,8 +206,43 @@ export function useControls() {
       setMousePosition({ x: e.clientX, y: e.clientY });
     };
     
+    // Check if click is on a UI element that should block web shooting
+    const isUIElement = (target: EventTarget | null): boolean => {
+      if (!target || !(target instanceof HTMLElement)) return false;
+      
+      // Check if the target or any parent is a UI element
+      let element: HTMLElement | null = target;
+      while (element) {
+        // Check for common UI indicators
+        const tagName = element.tagName.toLowerCase();
+        if (
+          tagName === 'button' ||
+          tagName === 'input' ||
+          tagName === 'select' ||
+          tagName === 'textarea' ||
+          element.hasAttribute('data-ui') ||
+          element.classList.contains('pointer-events-auto') ||
+          element.classList.contains('game-ui') ||
+          element.classList.contains('glass-panel') ||
+          element.classList.contains('glass-panel-light') ||
+          element.getAttribute('role') === 'button' ||
+          element.getAttribute('role') === 'dialog' ||
+          // Check if clickable (has click handler indicator)
+          element.style.cursor === 'pointer' ||
+          window.getComputedStyle(element).cursor === 'pointer'
+        ) {
+          return true;
+        }
+        element = element.parentElement;
+      }
+      return false;
+    };
+    
     const handleMouseDown = (e: MouseEvent) => {
       if (gamePhase !== 'playing') return;
+      
+      // Skip if clicking on UI elements
+      if (isUIElement(e.target)) return;
       
       // Right click or Shift+Click for Zip
       if (e.button === 2 || (e.button === 0 && e.shiftKey)) {

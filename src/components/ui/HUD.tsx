@@ -1,8 +1,9 @@
 'use client';
 
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useEffect, useCallback } from 'react';
 import { GameState, ActivePowerUp } from '@/lib/types/game';
 import { GAME_CONFIG, POWER_UP_CONFIG } from '@/lib/constants/gameConfig';
+import { soundManager, playSound } from '@/lib/utils/sound';
 
 interface HUDProps {
   gameState: GameState;
@@ -10,6 +11,20 @@ interface HUDProps {
 
 const HUD = memo(function HUD({ gameState }: HUDProps) {
   const { score, highScore, webEnergy, combo, difficulty, activePowerUps } = gameState;
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  
+  // Initialize sound state
+  useEffect(() => {
+    setSoundEnabled(soundManager.isEnabled());
+  }, []);
+  
+  const toggleSound = useCallback(() => {
+    const newState = soundManager.toggle();
+    setSoundEnabled(newState);
+    if (newState) {
+      playSound('menuClick');
+    }
+  }, []);
   
   const energyPercent = (webEnergy / GAME_CONFIG.web.energy.max) * 100;
   const isLowEnergy = energyPercent < 25;
@@ -94,20 +109,37 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
           </div>
         )}
         
-        {/* Right side - Difficulty */}
-        <div className="glass-panel rounded-lg px-4 py-3 pointer-events-auto">
-          <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Difficulty</div>
-          <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full difficulty-bar rounded-full transition-all duration-500"
-              style={{ 
-                width: `${Math.min(100, ((difficulty - 1) / (GAME_CONFIG.difficulty.maxMultiplier - 1)) * 100)}%` 
-              }}
-            />
+        {/* Right side - Difficulty and Sound */}
+        <div className="flex flex-col gap-3">
+          <div className="glass-panel rounded-lg px-4 py-3 pointer-events-auto">
+            <div className="text-xs text-gray-400 uppercase tracking-wider mb-2">Difficulty</div>
+            <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full difficulty-bar rounded-full transition-all duration-500"
+                style={{ 
+                  width: `${Math.min(100, ((difficulty - 1) / (GAME_CONFIG.difficulty.maxMultiplier - 1)) * 100)}%` 
+                }}
+              />
+            </div>
+            <div className="text-xs text-gray-500 mt-1 text-right font-mono">
+              {difficulty.toFixed(2)}x
+            </div>
           </div>
-          <div className="text-xs text-gray-500 mt-1 text-right font-mono">
-            {difficulty.toFixed(2)}x
-          </div>
+          
+          {/* Sound Toggle */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleSound();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="glass-panel rounded-lg px-4 py-2 pointer-events-auto flex items-center justify-between gap-3 transition-all hover:bg-white/5"
+          >
+            <span className="text-xs text-gray-400 uppercase tracking-wider">Sound</span>
+            <span className="text-lg">
+              {soundEnabled ? '🔊' : '🔇'}
+            </span>
+          </button>
         </div>
       </div>
     </div>

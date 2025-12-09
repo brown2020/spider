@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { useGameLoop, useControls } from '@/hooks/useGameLoop';
 import { GAME_CONFIG } from '@/lib/constants/gameConfig';
@@ -14,8 +14,11 @@ import PowerUps from './PowerUps';
 import HUD from '../ui/HUD';
 import Menu from '../ui/Menu';
 import Controls from '../ui/Controls';
+import Tutorial from '../ui/Tutorial';
 
 export default function GameContainer() {
+  const [showTutorial, setShowTutorial] = useState(false);
+  
   // Use Zustand store
   const gameState = useGameStore((state) => state.gameState);
   const webs = useGameStore((state) => state.webs);
@@ -42,6 +45,22 @@ export default function GameContainer() {
       height: window.innerHeight,
     });
   }, []);
+  
+  // Check if tutorial should show on first play
+  useEffect(() => {
+    if (gameState.gamePhase === 'playing') {
+      const hasSeenTutorial = localStorage.getItem('spiderTutorialComplete');
+      if (!hasSeenTutorial) {
+        setShowTutorial(true);
+        pauseGame(); // Pause while tutorial is showing
+      }
+    }
+  }, [gameState.gamePhase, pauseGame]);
+  
+  const handleTutorialComplete = useCallback(() => {
+    setShowTutorial(false);
+    resumeGame();
+  }, [resumeGame]);
   
   const canShoot = gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost;
   const isPlaying = gameState.gamePhase === 'playing';
@@ -99,6 +118,14 @@ export default function GameContainer() {
           startGame();
         }}
       />
+      
+      {/* Tutorial overlay */}
+      {showTutorial && (
+        <Tutorial 
+          isPlaying={showTutorial}
+          onComplete={handleTutorialComplete}
+        />
+      )}
     </div>
   );
 }

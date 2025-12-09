@@ -13,6 +13,7 @@ import {
   PowerUpType,
 } from '@/lib/types/game';
 import { GAME_CONFIG, PREY_TYPES } from '@/lib/constants/gameConfig';
+import { playSound } from '@/lib/utils/sound';
 
 // Utility function for unique IDs
 const generateId = (): string =>
@@ -157,6 +158,8 @@ export const useGameStore = create<GameStore>()(
       const { gameState } = get();
       const newHighScore = Math.max(gameState.score, gameState.highScore);
       
+      playSound('gameOver');
+      
       if (typeof window !== 'undefined') {
         localStorage.setItem('spiderHighScore', newHighScore.toString());
       }
@@ -225,6 +228,8 @@ export const useGameStore = create<GameStore>()(
       const { gameState } = get();
       if (gameState.isJumping) return;
       
+      playSound('jump');
+      
       set((state) => ({
         gameState: {
           ...state.gameState,
@@ -246,6 +251,8 @@ export const useGameStore = create<GameStore>()(
       const distance = Math.hypot(dx, dy);
       
       if (distance < 20) return;
+      
+      playSound('zip');
       
       const speed = GAME_CONFIG.physics.zipSpeed;
       const velocity = {
@@ -280,6 +287,8 @@ export const useGameStore = create<GameStore>()(
     shootWeb: (target) => {
       const { gameState } = get();
       if (gameState.webEnergy < GAME_CONFIG.web.energy.shootCost) return;
+      
+      playSound('webShoot');
       
       const newWeb: Web = {
         id: generateId(),
@@ -505,6 +514,13 @@ export const useGameStore = create<GameStore>()(
         ? Math.min(gameState.combo + 1, GAME_CONFIG.combo.multiplierCap)
         : 1;
       
+      // Play sound based on combo
+      if (newCombo > 1) {
+        playSound('combo');
+      } else {
+        playSound('catch');
+      }
+      
       // Calculate score with combo
       const comboMultiplier = 1 + (newCombo - 1) * 0.25;
       const points = Math.floor(config.value * comboMultiplier);
@@ -661,6 +677,8 @@ export const useGameStore = create<GameStore>()(
       const { powerUps, gameState } = get();
       const powerUp = powerUps.find((p) => p.id === powerUpId);
       if (!powerUp) return;
+      
+      playSound('powerUp');
       
       const now = Date.now();
       
