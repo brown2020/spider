@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import { memo, useMemo } from 'react';
-import { Web } from '@/lib/types/game';
-import { GAME_CONFIG } from '@/lib/constants/gameConfig';
+import { memo, useMemo } from "react";
+import { Web } from "@/lib/types/game";
+import { GAME_CONFIG } from "@/lib/constants/gameConfig";
+import { useGameStore } from "@/stores/gameStore";
 
 interface WebsProps {
   webs: Web[];
@@ -25,26 +26,26 @@ interface WebLineProps {
 }
 
 function WebLine({ web }: WebLineProps) {
-  const now = Date.now();
-  const timeElapsed = now - web.createdAt;
+  const frameTime = useGameStore((state) => state.frameTime);
+  const timeElapsed = frameTime - web.createdAt;
   const timeRemaining = web.lifetime - timeElapsed;
-  
+
   // Don't render expired webs
   if (timeRemaining <= 0) return null;
-  
+
   const progress = timeElapsed / web.lifetime;
   const opacity = Math.max(0.2, 1 - progress * 0.8);
   const fadeStart = web.lifetime * 0.7;
   const isFading = timeRemaining < web.lifetime - fadeStart;
-  
+
   const dx = web.endPos.x - web.startPos.x;
   const dy = web.endPos.y - web.startPos.y;
   const length = Math.hypot(dx, dy);
   const angle = Math.atan2(dy, dx);
-  
+
   // Calculate glow intensity based on age
   const glowIntensity = GAME_CONFIG.web.glowIntensity * (1 - progress * 0.5);
-  
+
   return (
     <>
       {/* Main web line with glow */}
@@ -55,7 +56,7 @@ function WebLine({ web }: WebLineProps) {
           top: web.startPos.y,
           width: length,
           height: GAME_CONFIG.web.thickness,
-          transformOrigin: 'left center',
+          transformOrigin: "left center",
           transform: `rotate(${angle}rad)`,
           opacity: opacity,
           boxShadow: `
@@ -66,21 +67,17 @@ function WebLine({ web }: WebLineProps) {
           zIndex: 900,
         }}
       />
-      
+
       {/* Web anchor points with glow */}
-      <WebAnchor 
-        position={web.startPos} 
-        opacity={opacity} 
+      <WebAnchor
+        position={web.startPos}
+        opacity={opacity}
         isFading={isFading}
       />
-      <WebAnchor 
-        position={web.endPos} 
-        opacity={opacity} 
-        isFading={isFading}
-      />
-      
+      <WebAnchor position={web.endPos} opacity={opacity} isFading={isFading} />
+
       {/* Decorative nodes along the web */}
-      <WebNodes 
+      <WebNodes
         startPos={web.startPos}
         endPos={web.endPos}
         opacity={opacity}
@@ -99,16 +96,16 @@ interface WebAnchorProps {
 function WebAnchor({ position, opacity, isFading }: WebAnchorProps) {
   return (
     <div
-      className={`absolute rounded-full ${!isFading ? 'web-anchor' : ''}`}
+      className={`absolute rounded-full ${!isFading ? "web-anchor" : ""}`}
       style={{
         left: position.x,
         top: position.y,
         width: 6,
         height: 6,
-        transform: 'translate(-50%, -50%)',
-        backgroundColor: 'rgba(220, 235, 255, 0.9)',
+        transform: "translate(-50%, -50%)",
+        backgroundColor: "rgba(220, 235, 255, 0.9)",
         opacity: opacity,
-        boxShadow: '0 0 8px rgba(200, 220, 255, 0.8)',
+        boxShadow: "0 0 8px rgba(200, 220, 255, 0.8)",
         zIndex: 901,
       }}
     />
@@ -123,12 +120,10 @@ interface WebNodesProps {
 }
 
 function WebNodes({ startPos, endPos, opacity, length }: WebNodesProps) {
-  // Add decorative nodes for longer webs
   const nodeCount = Math.floor(length / 80);
-  
-  if (nodeCount < 1) return null;
-  
+
   const nodes = useMemo(() => {
+    if (nodeCount < 1) return [];
     return Array.from({ length: nodeCount }, (_, i) => {
       const t = (i + 1) / (nodeCount + 1);
       return {
@@ -137,8 +132,10 @@ function WebNodes({ startPos, endPos, opacity, length }: WebNodesProps) {
         size: 3 + Math.sin(i * 1.5) * 1,
       };
     });
-  }, [startPos, endPos, nodeCount]);
-  
+  }, [startPos.x, startPos.y, endPos.x, endPos.y, nodeCount]);
+
+  if (nodes.length === 0) return null;
+
   return (
     <>
       {nodes.map((node, i) => (
@@ -150,10 +147,10 @@ function WebNodes({ startPos, endPos, opacity, length }: WebNodesProps) {
             top: node.y,
             width: node.size,
             height: node.size,
-            transform: 'translate(-50%, -50%)',
-            backgroundColor: 'rgba(200, 220, 255, 0.7)',
+            transform: "translate(-50%, -50%)",
+            backgroundColor: "rgba(200, 220, 255, 0.7)",
             opacity: opacity * 0.8,
-            boxShadow: '0 0 4px rgba(200, 220, 255, 0.5)',
+            boxShadow: "0 0 4px rgba(200, 220, 255, 0.5)",
             zIndex: 900,
           }}
         />

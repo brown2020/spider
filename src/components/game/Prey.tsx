@@ -8,88 +8,94 @@ interface PreyProps {
   preyList: PreyType[];
 }
 
+// Individual prey item component - memoized for performance
+interface PreyItemProps {
+  prey: PreyType;
+}
+
+const PreyItem = memo(function PreyItem({ prey }: PreyItemProps) {
+  const config = PREY_TYPES[prey.type];
+  const isTrapped = prey.isTrapped;
+  const wingPhase = prey.wingPhase;
+  const wingScale = 0.8 + Math.sin(wingPhase) * 0.2;
+
+  return (
+    <div
+      className={`absolute ${isTrapped ? "trapped-struggle" : ""}`}
+      style={{
+        left: prey.position.x,
+        top: prey.position.y,
+        transform: "translate(-50%, -50%)",
+        zIndex: 800,
+      }}
+    >
+      {/* Glow effect */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: config.size * 2.5,
+          height: config.size * 2.5,
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          background: `radial-gradient(circle, ${config.glowColor} 0%, transparent 70%)`,
+          opacity: isTrapped ? 0.3 : 0.6,
+          filter: "blur(4px)",
+        }}
+      />
+
+      {/* Main body */}
+      {prey.type === "moth" && (
+        <MothSprite
+          config={config}
+          wingScale={wingScale}
+          isTrapped={isTrapped}
+          angle={prey.angle}
+        />
+      )}
+
+      {prey.type === "firefly" && (
+        <FireflySprite
+          config={config}
+          isTrapped={isTrapped}
+          wingPhase={wingPhase}
+        />
+      )}
+
+      {prey.type === "beetle" && (
+        <BeetleSprite
+          config={config}
+          isTrapped={isTrapped}
+          angle={prey.angle}
+        />
+      )}
+
+      {prey.type === "dragonfly" && (
+        <DragonflySprite
+          config={config}
+          wingScale={wingScale}
+          isTrapped={isTrapped}
+        />
+      )}
+
+      {prey.type === "butterfly" && (
+        <ButterflySprite
+          config={config}
+          wingScale={wingScale}
+          isTrapped={isTrapped}
+          angle={prey.angle}
+        />
+      )}
+    </div>
+  );
+});
+
 const PreyComponent = memo(function PreyComponent({ preyList }: PreyProps) {
   return (
     <>
-      {preyList.map((prey) => {
-        const config = PREY_TYPES[prey.type];
-        const isTrapped = prey.isTrapped;
-
-        // Wing animation phase
-        const wingPhase = prey.wingPhase;
-        const wingScale = 0.8 + Math.sin(wingPhase) * 0.2;
-
-        return (
-          <div
-            key={prey.id}
-            className={`absolute ${isTrapped ? "trapped-struggle" : ""}`}
-            style={{
-              left: prey.position.x,
-              top: prey.position.y,
-              transform: "translate(-50%, -50%)",
-              zIndex: 800,
-            }}
-          >
-            {/* Glow effect */}
-            <div
-              className="absolute rounded-full"
-              style={{
-                width: config.size * 2.5,
-                height: config.size * 2.5,
-                left: "50%",
-                top: "50%",
-                transform: "translate(-50%, -50%)",
-                background: `radial-gradient(circle, ${config.glowColor} 0%, transparent 70%)`,
-                opacity: isTrapped ? 0.3 : 0.6,
-                filter: "blur(4px)",
-              }}
-            />
-
-            {/* Main body */}
-            {prey.type === "moth" && (
-              <MothSprite
-                config={config}
-                wingScale={wingScale}
-                isTrapped={isTrapped}
-                angle={prey.angle}
-              />
-            )}
-
-            {prey.type === "firefly" && (
-              <FireflySprite
-                config={config}
-                isTrapped={isTrapped}
-                wingPhase={wingPhase}
-              />
-            )}
-
-            {prey.type === "beetle" && (
-              <BeetleSprite
-                config={config}
-                isTrapped={isTrapped}
-                angle={prey.angle}
-              />
-            )}
-
-            {prey.type === "dragonfly" && (
-              <DragonflySprite
-                config={config}
-                wingScale={wingScale}
-                isTrapped={isTrapped}
-              />
-            )}
-
-            {prey.type === "butterfly" && (
-              <ButterflySprite
-                config={config}
-                wingScale={wingScale}
-                isTrapped={isTrapped}
-                angle={prey.angle}
-              />
-            )}
-          </div>
-        );
-      })}
+      {preyList.map((prey) => (
+        <PreyItem key={prey.id} prey={prey} />
+      ))}
     </>
   );
 });
