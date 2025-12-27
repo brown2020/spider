@@ -116,3 +116,6 @@ const PowerUps = memo(function PowerUps({ powerUps }: PowerUpsProps) {
 
 export default PowerUps;
 
+
+
+
