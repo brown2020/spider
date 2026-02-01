@@ -169,11 +169,11 @@ class SoundManager {
     oscillator.stop(now + config.duration);
   }
 
-  play(sound: SoundType) {
+  play(sound: SoundType, options?: { pitchMultiplier?: number; volumeMultiplier?: number }) {
     if (!this.enabled) return;
-    
+
     this.init();
-    
+
     // Resume audio context if suspended (browser autoplay policy)
     if (this.audioContext?.state === 'suspended') {
       this.audioContext.resume();
@@ -181,19 +181,66 @@ class SoundManager {
 
     const config = SOUND_CONFIGS[sound];
     if (config) {
-      this.createOscillator(config);
-      
+      const pitchMult = options?.pitchMultiplier ?? 1;
+      const volMult = options?.volumeMultiplier ?? 1;
+
+      this.createOscillator({
+        ...config,
+        frequency: config.frequency * pitchMult,
+        volume: config.volume * volMult,
+        pitchBend: config.pitchBend ? config.pitchBend * pitchMult : undefined,
+      });
+
       // Add harmonics for richer sounds
       if (sound === 'catch' || sound === 'combo' || sound === 'powerUp') {
         setTimeout(() => {
           this.createOscillator({
             ...config,
-            frequency: config.frequency * 1.5,
-            volume: config.volume * 0.5,
+            frequency: config.frequency * 1.5 * pitchMult,
+            volume: config.volume * 0.5 * volMult,
           });
         }, 20);
+
+        // Add third harmonic for combos
+        if (sound === 'combo' && pitchMult > 1.2) {
+          setTimeout(() => {
+            this.createOscillator({
+              ...config,
+              frequency: config.frequency * 2 * pitchMult,
+              volume: config.volume * 0.3 * volMult,
+            });
+          }, 40);
+        }
       }
     }
+  }
+
+  // Play a rising arpeggio for big combos
+  playComboArpeggio(comboLevel: number) {
+    if (!this.enabled || comboLevel < 5) return;
+
+    this.init();
+
+    if (this.audioContext?.state === 'suspended') {
+      this.audioContext.resume();
+    }
+
+    const baseFreq = 400;
+    const notes = [1, 1.25, 1.5, 1.75, 2]; // Major-ish arpeggio
+    const noteCount = Math.min(notes.length, Math.floor(comboLevel / 2));
+
+    notes.slice(0, noteCount).forEach((mult, i) => {
+      setTimeout(() => {
+        this.createOscillator({
+          frequency: baseFreq * mult,
+          duration: 0.15,
+          type: 'sine',
+          attack: 0.01,
+          decay: 0.14,
+          volume: 0.25 * this.volume,
+        });
+      }, i * 60);
+    });
   }
 
   setEnabled(enabled: boolean) {
@@ -227,7 +274,22 @@ class SoundManager {
 // Singleton instance
 export const soundManager = new SoundManager();
 
-// Convenience function
-export function playSound(sound: SoundType) {
-  soundManager.play(sound);
+// Convenience function with optional pitch/volume control
+export function playSound(sound: SoundType, options?: { pitchMultiplier?: number; volumeMultiplier?: number }) {
+  soundManager.play(sound, options);
+}
+
+// Play sound with combo-scaled pitch (higher pitch for higher combos)
+export function playSoundWithCombo(sound: SoundType, comboLevel: number) {
+  // Scale pitch from 1.0 (combo 1) to 1.5 (combo 10)
+  const pitchMultiplier = 1 + Math.min(comboLevel - 1, 9) * 0.05;
+  // Slightly louder at higher combos
+  const volumeMultiplier = 1 + Math.min(comboLevel - 1, 9) * 0.03;
+
+  soundManager.play(sound, { pitchMultiplier, volumeMultiplier });
+
+  // Play arpeggio for milestone combos
+  if (comboLevel === 5 || comboLevel === 10) {
+    soundManager.playComboArpeggio(comboLevel);
+  }
 }

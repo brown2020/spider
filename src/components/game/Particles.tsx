@@ -49,6 +49,60 @@ const Particles = memo(function Particles({ particles }: ParticlesProps) {
             scale = 1 - progress * 0.5;
             blur = progress * 3;
             break;
+          case "confetti":
+            scale = 1 - progress * 0.3;
+            break;
+          case "ring":
+            scale = 1 + progress * 3;
+            break;
+          case "anticipation":
+            scale = 1 + Math.sin(progress * Math.PI * 4) * 0.3;
+            extraGlow = true;
+            break;
+        }
+
+        // Render ring particles (expanding circles)
+        if (particle.type === "ring") {
+          return (
+            <div
+              key={particle.id}
+              className="absolute rounded-full pointer-events-none"
+              style={{
+                left: particle.position.x,
+                top: particle.position.y,
+                width: particle.size * scale,
+                height: particle.size * scale,
+                transform: "translate(-50%, -50%)",
+                border: `2px solid ${particle.color}`,
+                opacity: opacity * 0.7,
+                boxShadow: `0 0 ${particle.size * 0.5}px ${particle.color}`,
+                zIndex: 845,
+              }}
+            />
+          );
+        }
+
+        // Render confetti particles (tumbling rectangles)
+        if (particle.type === "confetti") {
+          const rotation = particle.rotation ?? 0;
+          return (
+            <div
+              key={particle.id}
+              className="absolute pointer-events-none"
+              style={{
+                left: particle.position.x,
+                top: particle.position.y,
+                width: particle.size * 0.4,
+                height: particle.size,
+                transform: `translate(-50%, -50%) rotate(${rotation}deg) scale(${scale})`,
+                backgroundColor: particle.color,
+                opacity,
+                borderRadius: "2px",
+                boxShadow: `0 0 ${particle.size * 0.5}px ${particle.color}`,
+                zIndex: 855,
+              }}
+            />
+          );
         }
 
         // Star shape for combo particles

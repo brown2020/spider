@@ -11,7 +11,8 @@ export type PreyType =
   | "firefly"
   | "beetle"
   | "dragonfly"
-  | "butterfly";
+  | "butterfly"
+  | "goldenMoth";
 
 export interface PreyConfig {
   type: PreyType;
@@ -57,6 +58,8 @@ export interface GameState {
   isCrawling: boolean;
   isWebShooting: boolean;
   isZipping: boolean;
+  isOnWall: boolean;
+  canDoubleJump: boolean;
 
   // Game progression
   score: number;
@@ -75,6 +78,13 @@ export interface GameState {
   // Active effects
   activePowerUps: ActivePowerUp[];
   screenShake: number;
+  screenShakeDirection: Vector2D;
+  screenFlash: { color: string; intensity: number } | null;
+  freezeFrame: number;
+
+  // Coyote time (grace period after leaving ground)
+  coyoteTime: number;
+  lastGroundedTime: number;
 }
 
 export interface Web {
@@ -105,9 +115,20 @@ export interface Particle {
   lifetime: number;
   createdAt: number;
   color: string;
-  type: "trail" | "catch" | "web" | "sparkle" | "combo";
+  type: "trail" | "catch" | "web" | "sparkle" | "combo" | "confetti" | "ring" | "anticipation";
   rotation?: number;
+  rotationSpeed?: number;
   scale?: number;
+  gravity?: number;
+}
+
+// Ring burst effect for visual feedback
+export interface RingBurstEffect {
+  id: string;
+  position: Vector2D;
+  color: string;
+  size: number;
+  createdAt: number;
 }
 
 export interface ScorePopup {

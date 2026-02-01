@@ -928,3 +928,134 @@
     opacity: 0.8;
   }
 }
+
+/* Screen flash effect */
+.screen-flash {
+  animation: screen-flash-fade 0.15s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes screen-flash-fade {
+  0% {
+    opacity: var(--flash-intensity, 0.3);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Prey anticipation glow */
+.prey-anticipation {
+  animation: anticipation-pulse 0.4s ease-in-out infinite;
+}
+
+@keyframes anticipation-pulse {
+  0%,
+  100% {
+    filter: brightness(1) drop-shadow(0 0 4px rgba(255, 255, 100, 0.5));
+  }
+  50% {
+    filter: brightness(1.3) drop-shadow(0 0 12px rgba(255, 255, 100, 0.9));
+  }
+}
+
+/* Confetti tumble animation */
+.confetti-particle {
+  animation: confetti-fall 1.2s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100px) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+/* Ring burst expansion */
+.ring-burst {
+  animation: ring-expand 0.4s ease-out forwards;
+}
+
+@keyframes ring-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(3);
+    opacity: 0;
+  }
+}
+
+/* Landing dust effect */
+.landing-dust {
+  animation: dust-puff 0.4s ease-out forwards;
+}
+
+@keyframes dust-puff {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.5) translateY(-10px);
+    opacity: 0;
+  }
+}
+
+/* Power-up aura glow */
+.power-up-aura {
+  animation: aura-pulse 1s ease-in-out infinite;
+}
+
+@keyframes aura-pulse {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.6;
+  }
+}
+
+/* Speed lines effect */
+.speed-lines {
+  animation: speed-streak 0.2s linear infinite;
+}
+
+@keyframes speed-streak {
+  0% {
+    opacity: 0.8;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(2);
+  }
+}
+
+/* Combo milestone celebration */
+.combo-milestone {
+  animation: milestone-burst 0.5s ease-out;
+}
+
+@keyframes milestone-burst {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(1.5);
+    filter: brightness(2);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+}
