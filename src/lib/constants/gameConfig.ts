@@ -80,6 +80,20 @@ export const GAME_CONFIG = {
   effects: {
     screenShakeDuration: 200,
     scorePopupDuration: 1500,
+    freezeFrameDuration: 80,
+    screenFlashDuration: 150,
+    catchAnticipationRadius: 80,
+    confettiCount: 25,
+    ringBurstCount: 3,
+  },
+  movement: {
+    acceleration: 0.8,
+    deceleration: 0.85,
+    airControl: 0.6,
+    wallSlideSpeed: 2,
+    wallJumpForce: { x: 12, y: -12 },
+    coyoteTime: 150,
+    doubleJumpForce: 11,
   },
 } as const;
 
@@ -134,6 +148,16 @@ export const PREY_TYPES: Record<PreyType, PreyConfig> = {
     glowColor: "rgba(255, 105, 180, 0.6)",
     behavior: "erratic",
     spawnWeight: 15,
+  },
+  goldenMoth: {
+    type: "goldenMoth",
+    baseSpeed: 4,
+    size: 18,
+    value: 500,
+    color: "#FFD700",
+    glowColor: "rgba(255, 215, 0, 0.9)",
+    behavior: "erratic",
+    spawnWeight: 3, // Rare!
   },
 };
 

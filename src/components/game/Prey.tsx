@@ -1,8 +1,9 @@
 "use client";
 
-import { memo } from "react";
-import { Prey as PreyType } from "@/lib/types/game";
-import { PREY_TYPES } from "@/lib/constants/gameConfig";
+import { memo, useMemo } from "react";
+import { Prey as PreyType, Vector2D } from "@/lib/types/game";
+import { PREY_TYPES, GAME_CONFIG } from "@/lib/constants/gameConfig";
+import { useGameStore } from "@/stores/gameStore";
 
 interface PreyProps {
   preyList: PreyType[];
@@ -11,17 +12,35 @@ interface PreyProps {
 // Individual prey item component - memoized for performance
 interface PreyItemProps {
   prey: PreyType;
+  spiderPosition: Vector2D;
 }
 
-const PreyItem = memo(function PreyItem({ prey }: PreyItemProps) {
+const PreyItem = memo(function PreyItem({ prey, spiderPosition }: PreyItemProps) {
   const config = PREY_TYPES[prey.type];
   const isTrapped = prey.isTrapped;
   const wingPhase = prey.wingPhase;
   const wingScale = 0.8 + Math.sin(wingPhase) * 0.2;
 
+  // Calculate distance to spider for anticipation glow
+  const distanceToSpider = useMemo(() => {
+    return Math.hypot(
+      prey.position.x - spiderPosition.x,
+      prey.position.y - spiderPosition.y
+    );
+  }, [prey.position.x, prey.position.y, spiderPosition.x, spiderPosition.y]);
+
+  // Anticipation glow intensity (stronger when spider is closer)
+  const anticipationRadius = GAME_CONFIG.effects.catchAnticipationRadius;
+  const isInAnticipationRange = distanceToSpider < anticipationRadius && !isTrapped;
+  const anticipationIntensity = isInAnticipationRange
+    ? 1 - distanceToSpider / anticipationRadius
+    : 0;
+
   return (
     <div
-      className={`absolute ${isTrapped ? "trapped-struggle" : ""}`}
+      className={`absolute ${isTrapped ? "trapped-struggle" : ""} ${
+        isInAnticipationRange ? "prey-anticipation" : ""
+      }`}
       style={{
         left: prey.position.x,
         top: prey.position.y,
@@ -29,7 +48,24 @@ const PreyItem = memo(function PreyItem({ prey }: PreyItemProps) {
         zIndex: 800,
       }}
     >
-      {/* Glow effect */}
+      {/* Anticipation glow - pulses when spider is near */}
+      {isInAnticipationRange && (
+        <div
+          className="absolute rounded-full animate-pulse"
+          style={{
+            width: config.size * 3.5,
+            height: config.size * 3.5,
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+            background: `radial-gradient(circle, rgba(255, 255, 100, ${anticipationIntensity * 0.6}) 0%, transparent 70%)`,
+            filter: "blur(6px)",
+            animation: `pulse ${0.3 + (1 - anticipationIntensity) * 0.4}s ease-in-out infinite`,
+          }}
+        />
+      )}
+
+      {/* Regular glow effect */}
       <div
         className="absolute rounded-full"
         style={{
@@ -39,7 +75,7 @@ const PreyItem = memo(function PreyItem({ prey }: PreyItemProps) {
           top: "50%",
           transform: "translate(-50%, -50%)",
           background: `radial-gradient(circle, ${config.glowColor} 0%, transparent 70%)`,
-          opacity: isTrapped ? 0.3 : 0.6,
+          opacity: isTrapped ? 0.3 : isInAnticipationRange ? 0.8 : 0.6,
           filter: "blur(4px)",
         }}
       />
@@ -86,15 +122,27 @@ const PreyItem = memo(function PreyItem({ prey }: PreyItemProps) {
           angle={prey.angle}
         />
       )}
+
+      {prey.type === "goldenMoth" && (
+        <GoldenMothSprite
+          config={config}
+          wingScale={wingScale}
+          isTrapped={isTrapped}
+          angle={prey.angle}
+          wingPhase={wingPhase}
+        />
+      )}
     </div>
   );
 });
 
 const PreyComponent = memo(function PreyComponent({ preyList }: PreyProps) {
+  const spiderPosition = useGameStore((state) => state.gameState.position);
+
   return (
     <>
       {preyList.map((prey) => (
-        <PreyItem key={prey.id} prey={prey} />
+        <PreyItem key={prey.id} prey={prey} spiderPosition={spiderPosition} />
       ))}
     </>
   );
@@ -367,6 +415,105 @@ function ButterflySprite({
           backgroundColor: "#2d1f3d",
           borderRadius: "40%",
           boxShadow: `0 0 4px ${config.glowColor}`,
+        }}
+      />
+    </div>
+  );
+}
+
+// Golden Moth - rare, high value, with golden sparkle trail
+function GoldenMothSprite({
+  config,
+  wingScale = 1,
+  isTrapped,
+  angle = 0,
+  wingPhase = 0,
+}: SpriteProps) {
+  const shimmer = 0.7 + Math.sin(wingPhase * 0.8) * 0.3;
+
+  return (
+    <div
+      className="relative"
+      style={{
+        transform: `rotate(${angle * 2}deg)`,
+        opacity: isTrapped ? 0.7 : 1,
+      }}
+    >
+      {/* Magical golden aura */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: config.size * 3,
+          height: config.size * 3,
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          background: `radial-gradient(circle, rgba(255, 215, 0, ${shimmer * 0.5}) 0%, rgba(255, 180, 0, 0.2) 50%, transparent 70%)`,
+          filter: "blur(4px)",
+          animation: "pulse 1s ease-in-out infinite",
+        }}
+      />
+
+      {/* Sparkle particles around the moth */}
+      {[0, 1, 2, 3].map((i) => {
+        const sparkleAngle = (wingPhase * 2 + i * (Math.PI / 2)) % (Math.PI * 2);
+        const sparkleRadius = config.size * 0.8;
+        const sparkleX = Math.cos(sparkleAngle) * sparkleRadius;
+        const sparkleY = Math.sin(sparkleAngle) * sparkleRadius;
+
+        return (
+          <div
+            key={i}
+            className="absolute rounded-full"
+            style={{
+              width: 3,
+              height: 3,
+              left: `calc(50% + ${sparkleX}px)`,
+              top: `calc(50% + ${sparkleY}px)`,
+              transform: "translate(-50%, -50%)",
+              backgroundColor: "#FFD700",
+              boxShadow: "0 0 6px #FFD700, 0 0 12px #FFA500",
+              opacity: shimmer,
+            }}
+          />
+        );
+      })}
+
+      {/* Wings with golden gradient */}
+      <div
+        className="absolute"
+        style={{
+          width: config.size * 2,
+          height: config.size * 0.9,
+          left: "50%",
+          top: "50%",
+          transform: `translate(-50%, -50%) scaleY(${wingScale})`,
+          background: `linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 200, 0, 0.7) 15%,
+            #FFD700 35%,
+            #FFF8DC 50%,
+            #FFD700 65%,
+            rgba(255, 200, 0, 0.7) 85%,
+            transparent 100%
+          )`,
+          borderRadius: "50%",
+          filter: `blur(1px) brightness(${1 + shimmer * 0.3})`,
+          boxShadow: `0 0 ${10 * shimmer}px rgba(255, 215, 0, 0.6)`,
+        }}
+      />
+
+      {/* Body with golden sheen */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: config.size * 0.4,
+          height: config.size * 0.8,
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          background: "linear-gradient(to right, #B8860B, #FFD700, #B8860B)",
+          boxShadow: `0 0 8px ${config.glowColor}, 0 0 16px rgba(255, 215, 0, 0.5)`,
         }}
       />
     </div>

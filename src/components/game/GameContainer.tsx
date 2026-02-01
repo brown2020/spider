@@ -64,14 +64,22 @@ export default function GameContainer() {
   
   const canShoot = gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost;
   const isPlaying = gameState.gamePhase === 'playing';
-  
+
+  // Calculate directional screen shake offset
+  const shakeOffset = gameState.screenShake > 0 ? {
+    x: gameState.screenShakeDirection.x * gameState.screenShake * (Math.random() - 0.5) * 2,
+    y: gameState.screenShakeDirection.y * gameState.screenShake * (Math.random() - 0.5) * 2,
+  } : { x: 0, y: 0 };
+
   return (
-    <div 
-      className={`fixed inset-0 w-screen h-screen overflow-hidden ${
-        gameState.screenShake > 0 ? 'screen-shake' : ''
-      }`}
+    <div
+      className="fixed inset-0 w-screen h-screen overflow-hidden"
       style={{
         cursor: isPlaying ? (canShoot ? 'crosshair' : 'not-allowed') : 'default',
+        transform: gameState.screenShake > 0
+          ? `translate(${shakeOffset.x}px, ${shakeOffset.y}px)`
+          : undefined,
+        transition: gameState.screenShake > 0 ? 'none' : 'transform 0.1s ease-out',
       }}
     >
       {/* Background layer */}
@@ -121,9 +129,20 @@ export default function GameContainer() {
       
       {/* Tutorial overlay */}
       {showTutorial && (
-        <Tutorial 
+        <Tutorial
           isPlaying={showTutorial}
           onComplete={handleTutorialComplete}
+        />
+      )}
+
+      {/* Screen flash effect */}
+      {gameState.screenFlash && (
+        <div
+          className="fixed inset-0 pointer-events-none z-[9999] screen-flash"
+          style={{
+            backgroundColor: gameState.screenFlash.color,
+            opacity: gameState.screenFlash.intensity,
+          }}
         />
       )}
     </div>
