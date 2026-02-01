@@ -7,7 +7,10 @@ export type ParticlePreset =
   | "catch"
   | "combo"
   | "powerUp"
-  | "trail";
+  | "trail"
+  | "confetti"
+  | "anticipation"
+  | "landing";
 
 interface ParticleConfig {
   velocitySpread: number;
@@ -17,6 +20,8 @@ interface ParticleConfig {
   lifetime: number;
   color: string;
   type: Particle["type"];
+  gravity?: number;
+  rotationSpeed?: number;
 }
 
 const PARTICLE_PRESETS: Record<ParticlePreset, ParticleConfig> = {
@@ -67,6 +72,34 @@ const PARTICLE_PRESETS: Record<ParticlePreset, ParticleConfig> = {
     sizeVariance: 2,
     lifetime: 500,
     color: "rgba(255, 255, 255, 0.5)",
+    type: "trail",
+  },
+  confetti: {
+    velocitySpread: 15,
+    velocityBias: { x: 0, y: -8 },
+    baseSize: 8,
+    sizeVariance: 4,
+    lifetime: 1200,
+    color: "hsl(0, 100%, 60%)",
+    type: "confetti",
+    gravity: 0.15,
+    rotationSpeed: 10,
+  },
+  anticipation: {
+    velocitySpread: 1,
+    baseSize: 3,
+    sizeVariance: 2,
+    lifetime: 400,
+    color: "rgba(255, 255, 100, 0.8)",
+    type: "anticipation",
+  },
+  landing: {
+    velocitySpread: 6,
+    velocityBias: { x: 0, y: -2 },
+    baseSize: 4,
+    sizeVariance: 3,
+    lifetime: 400,
+    color: "rgba(150, 130, 100, 0.7)",
     type: "trail",
   },
 };
@@ -140,6 +173,113 @@ export function createTrailParticle(
     color: isZipping ? "rgba(100, 200, 255, 0.8)" : "rgba(255, 255, 255, 0.5)",
     type: "trail",
   };
+}
+
+// Confetti burst for big combos and milestones
+const CONFETTI_COLORS = [
+  "hsl(0, 100%, 60%)",    // Red
+  "hsl(45, 100%, 55%)",   // Gold
+  "hsl(120, 70%, 50%)",   // Green
+  "hsl(200, 100%, 55%)",  // Blue
+  "hsl(280, 80%, 60%)",   // Purple
+  "hsl(320, 90%, 60%)",   // Pink
+];
+
+export function createConfettiParticles(
+  position: Vector2D,
+  count: number,
+  intensity: number = 1
+): Omit<Particle, "id" | "createdAt">[] {
+  return Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (5 + Math.random() * 10) * intensity;
+    const color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+
+    return {
+      position: { ...position },
+      velocity: {
+        x: Math.cos(angle) * speed,
+        y: Math.sin(angle) * speed - 8 * intensity,
+      },
+      size: 6 + Math.random() * 6,
+      lifetime: 1200 + Math.random() * 400,
+      color,
+      type: "confetti" as const,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 15,
+      gravity: 0.12 + Math.random() * 0.08,
+    };
+  });
+}
+
+// Ring burst effect particles (expanding circles)
+export function createRingBurstParticles(
+  position: Vector2D,
+  color: string,
+  count: number = 3
+): Omit<Particle, "id" | "createdAt">[] {
+  return Array.from({ length: count }, (_, i) => ({
+    position: { ...position },
+    velocity: { x: 0, y: 0 },
+    size: 20 + i * 15,
+    lifetime: 400 + i * 100,
+    color,
+    type: "ring" as const,
+    scale: 0.5,
+  }));
+}
+
+// Anticipation glow particles around prey when spider is near
+export function createAnticipationParticles(
+  position: Vector2D,
+  count: number = 6
+): Omit<Particle, "id" | "createdAt">[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2;
+    const radius = 15;
+
+    return {
+      position: {
+        x: position.x + Math.cos(angle) * radius,
+        y: position.y + Math.sin(angle) * radius,
+      },
+      velocity: {
+        x: Math.cos(angle) * 0.5,
+        y: Math.sin(angle) * 0.5,
+      },
+      size: 3 + Math.random() * 2,
+      lifetime: 300,
+      color: "rgba(255, 255, 150, 0.9)",
+      type: "anticipation" as const,
+    };
+  });
+}
+
+// Landing dust particles
+export function createLandingParticles(
+  position: Vector2D,
+  velocity: Vector2D,
+  count: number = 8
+): Omit<Particle, "id" | "createdAt">[] {
+  const impactForce = Math.abs(velocity.y) * 0.5;
+
+  return Array.from({ length: count }, () => {
+    const angle = Math.random() * Math.PI; // Only upward arc
+    const speed = (2 + Math.random() * 3) * Math.min(impactForce, 3);
+
+    return {
+      position: { x: position.x + (Math.random() - 0.5) * 20, y: position.y },
+      velocity: {
+        x: Math.cos(angle) * speed * (Math.random() > 0.5 ? 1 : -1),
+        y: -Math.sin(angle) * speed,
+      },
+      size: 3 + Math.random() * 4,
+      lifetime: 300 + Math.random() * 200,
+      color: `rgba(${120 + Math.random() * 40}, ${100 + Math.random() * 30}, ${80 + Math.random() * 20}, 0.6)`,
+      type: "trail" as const,
+      gravity: 0.2,
+    };
+  });
 }
 
 

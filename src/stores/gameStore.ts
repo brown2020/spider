@@ -13,11 +13,14 @@ import {
   PowerUpType,
 } from "@/lib/types/game";
 import { GAME_CONFIG, PREY_TYPES } from "@/lib/constants/gameConfig";
-import { playSound } from "@/lib/utils/sound";
+import { playSound, playSoundWithCombo } from "@/lib/utils/sound";
 import {
   createParticles,
   createWebShootParticles,
   createTrailParticle,
+  createConfettiParticles,
+  createRingBurstParticles,
+  createLandingParticles,
 } from "@/lib/utils/particles";
 
 // Utility function for unique IDs
@@ -66,6 +69,7 @@ interface GameStore {
   setDirection: (direction: GameState["direction"]) => void;
   setCrawling: (isCrawling: boolean) => void;
   jump: () => void;
+  doubleJump: () => void;
   zipTo: (target: Vector2D) => void;
 
   // Actions - Web
@@ -82,7 +86,9 @@ interface GameStore {
   updateParticles: () => void;
   addScorePopup: (position: Vector2D, value: number, combo?: number) => void;
   updateScorePopups: () => void;
-  triggerScreenShake: (intensity: number) => void;
+  triggerScreenShake: (intensity: number, direction?: Vector2D) => void;
+  triggerScreenFlash: (color: string, intensity: number) => void;
+  triggerFreezeFrame: (duration: number) => void;
 
   // Actions - Power-ups
   spawnPowerUp: (position: Vector2D) => void;
@@ -107,6 +113,8 @@ const getInitialGameState = (): GameState => ({
   isCrawling: false,
   isWebShooting: false,
   isZipping: false,
+  isOnWall: false,
+  canDoubleJump: true,
   score: 0,
   highScore:
     typeof window !== "undefined"
@@ -120,6 +128,11 @@ const getInitialGameState = (): GameState => ({
   difficulty: 1,
   activePowerUps: [],
   screenShake: 0,
+  screenShakeDirection: { x: 0, y: 0 },
+  screenFlash: null,
+  freezeFrame: 0,
+  coyoteTime: 0,
+  lastGroundedTime: 0,
 });
 
 export const useGameStore = create<GameStore>()(
@@ -248,6 +261,35 @@ export const useGameStore = create<GameStore>()(
             y: -GAME_CONFIG.spider.jumpForce,
           },
           isJumping: true,
+          canDoubleJump: true,
+        },
+      }));
+    },
+
+    doubleJump: () => {
+      const { gameState } = get();
+      if (!gameState.isJumping || !gameState.canDoubleJump) return;
+      if (gameState.webEnergy < GAME_CONFIG.web.energy.shootCost) return;
+
+      playSound("jump", { pitchMultiplier: 1.3 });
+
+      // Add particles for double jump effect
+      get().addParticles(
+        createParticles("zip", gameState.position, 8, {
+          velocityBias: { x: 0, y: 3 },
+          color: "rgba(150, 200, 255, 0.8)",
+        })
+      );
+
+      set((state) => ({
+        gameState: {
+          ...state.gameState,
+          velocity: {
+            ...state.gameState.velocity,
+            y: -GAME_CONFIG.movement.doubleJumpForce,
+          },
+          canDoubleJump: false,
+          webEnergy: state.gameState.webEnergy - GAME_CONFIG.web.energy.shootCost * 0.5,
         },
       }));
     },
@@ -297,26 +339,61 @@ export const useGameStore = create<GameStore>()(
 
       playSound("webShoot");
 
-      const newWeb: Web = {
-        id: generateId(),
-        startPos: { ...gameState.position },
-        endPos: { ...target },
-        lifetime: GAME_CONFIG.web.duration,
-        createdAt: frameTime,
-        strength: 1,
-      };
+      // Check for multiShot power-up
+      const hasMultiShot = gameState.activePowerUps.some(p => p.type === 'multiShot');
+
+      const newWebs: Web[] = [];
+
+      if (hasMultiShot) {
+        // Calculate angle to target
+        const dx = target.x - gameState.position.x;
+        const dy = target.y - gameState.position.y;
+        const baseAngle = Math.atan2(dy, dx);
+        const distance = Math.hypot(dx, dy);
+
+        // Spread angle (15 degrees each side)
+        const spreadAngle = Math.PI / 12;
+
+        // Create 3 webs in a spread pattern
+        for (let i = -1; i <= 1; i++) {
+          const angle = baseAngle + i * spreadAngle;
+          const endPos = {
+            x: gameState.position.x + Math.cos(angle) * distance,
+            y: gameState.position.y + Math.sin(angle) * distance,
+          };
+
+          newWebs.push({
+            id: generateId(),
+            startPos: { ...gameState.position },
+            endPos,
+            lifetime: GAME_CONFIG.web.duration,
+            createdAt: frameTime,
+            strength: 1,
+          });
+        }
+      } else {
+        // Single web shot
+        newWebs.push({
+          id: generateId(),
+          startPos: { ...gameState.position },
+          endPos: { ...target },
+          lifetime: GAME_CONFIG.web.duration,
+          createdAt: frameTime,
+          strength: 1,
+        });
+      }
 
       // Add web shooting particles
       get().addParticles(
         createWebShootParticles(
           gameState.position,
           target,
-          GAME_CONFIG.particles.webShootCount
+          GAME_CONFIG.particles.webShootCount * (hasMultiShot ? 2 : 1)
         )
       );
 
       set((state) => ({
-        webs: [...state.webs, newWeb].slice(-GAME_CONFIG.web.maxActive),
+        webs: [...state.webs, ...newWebs].slice(-GAME_CONFIG.web.maxActive),
         gameState: {
           ...state.gameState,
           isWebShooting: true,
@@ -540,9 +617,9 @@ export const useGameStore = create<GameStore>()(
           ? Math.min(gameState.combo + 1, GAME_CONFIG.combo.multiplierCap)
           : 1;
 
-      // Play sound based on combo
+      // Play sound with pitch scaling based on combo
       if (newCombo > 1) {
-        playSound("combo");
+        playSoundWithCombo("combo", newCombo);
       } else {
         playSound("catch");
       }
@@ -550,6 +627,12 @@ export const useGameStore = create<GameStore>()(
       // Calculate score with combo
       const comboMultiplier = 1 + (newCombo - 1) * 0.25;
       const points = Math.floor(config.value * comboMultiplier);
+
+      // Calculate direction from spider to prey for directional effects
+      const catchDirection = {
+        x: prey.position.x - gameState.position.x,
+        y: prey.position.y - gameState.position.y,
+      };
 
       // Add catch particles
       get().addParticles(
@@ -563,6 +646,11 @@ export const useGameStore = create<GameStore>()(
         )
       );
 
+      // Add ring burst effect
+      get().addParticles(
+        createRingBurstParticles(prey.position, config.glowColor, 3)
+      );
+
       // Add combo particles if combo > 1
       if (newCombo > 1) {
         get().addParticles(
@@ -572,6 +660,16 @@ export const useGameStore = create<GameStore>()(
         );
       }
 
+      // Big combo milestones (5x, 10x) get confetti and screen flash
+      if (newCombo === 5 || newCombo === 10 || newCombo % 10 === 0) {
+        const intensity = newCombo >= 10 ? 1.5 : 1;
+        get().addParticles(
+          createConfettiParticles(prey.position, GAME_CONFIG.effects.confettiCount, intensity)
+        );
+        get().triggerScreenFlash(`hsl(${50 + newCombo * 5}, 100%, 70%)`, 0.3);
+        get().triggerFreezeFrame(GAME_CONFIG.effects.freezeFrameDuration);
+      }
+
       // Score popup
       get().addScorePopup(
         prey.position,
@@ -579,8 +677,9 @@ export const useGameStore = create<GameStore>()(
         newCombo > 1 ? newCombo : undefined
       );
 
-      // Screen shake
-      get().triggerScreenShake(newCombo > 3 ? 8 : 4);
+      // Directional screen shake - stronger for higher combos
+      const shakeIntensity = newCombo > 5 ? 10 : newCombo > 3 ? 8 : 4;
+      get().triggerScreenShake(shakeIntensity, catchDirection);
 
       // Maybe spawn power-up
       if (
@@ -631,17 +730,28 @@ export const useGameStore = create<GameStore>()(
       set((state) => ({
         particles: state.particles
           .filter((p) => frameTime - p.createdAt < p.lifetime)
-          .map((p) => ({
-            ...p,
-            position: {
-              x: p.position.x + p.velocity.x,
-              y: p.position.y + p.velocity.y,
-            },
-            velocity: {
-              x: p.velocity.x * 0.95,
-              y: p.velocity.y * 0.95 + (p.type === "catch" ? 0.1 : 0),
-            },
-          })),
+          .map((p) => {
+            // Apply gravity for confetti and particles with gravity property
+            const gravity = p.gravity ?? (p.type === "confetti" ? 0.15 : p.type === "catch" ? 0.1 : 0);
+
+            // Update rotation for confetti
+            const newRotation = p.rotation !== undefined
+              ? p.rotation + (p.rotationSpeed ?? 0)
+              : undefined;
+
+            return {
+              ...p,
+              position: {
+                x: p.position.x + p.velocity.x,
+                y: p.position.y + p.velocity.y,
+              },
+              velocity: {
+                x: p.velocity.x * 0.98,
+                y: p.velocity.y * 0.98 + gravity,
+              },
+              rotation: newRotation,
+            };
+          }),
       }));
     },
 
@@ -670,23 +780,60 @@ export const useGameStore = create<GameStore>()(
       }));
     },
 
-    triggerScreenShake: (intensity) => {
+    triggerScreenShake: (intensity, direction?: Vector2D) => {
+      // Calculate directional shake if direction provided
+      const shakeDir = direction
+        ? {
+            x: direction.x / (Math.hypot(direction.x, direction.y) || 1),
+            y: direction.y / (Math.hypot(direction.x, direction.y) || 1)
+          }
+        : { x: (Math.random() - 0.5) * 2, y: (Math.random() - 0.5) * 2 };
+
       set((state) => ({
-        gameState: { ...state.gameState, screenShake: intensity },
+        gameState: {
+          ...state.gameState,
+          screenShake: intensity,
+          screenShakeDirection: shakeDir,
+        },
       }));
 
       // Reset after animation
       setTimeout(() => {
         set((state) => ({
-          gameState: { ...state.gameState, screenShake: 0 },
+          gameState: { ...state.gameState, screenShake: 0, screenShakeDirection: { x: 0, y: 0 } },
         }));
       }, GAME_CONFIG.effects.screenShakeDuration);
+    },
+
+    triggerScreenFlash: (color: string, intensity: number) => {
+      set((state) => ({
+        gameState: {
+          ...state.gameState,
+          screenFlash: { color, intensity }
+        },
+      }));
+
+      // Reset after flash duration
+      setTimeout(() => {
+        set((state) => ({
+          gameState: { ...state.gameState, screenFlash: null },
+        }));
+      }, GAME_CONFIG.effects.screenFlashDuration);
+    },
+
+    triggerFreezeFrame: (duration: number) => {
+      set((state) => ({
+        gameState: {
+          ...state.gameState,
+          freezeFrame: duration
+        },
+      }));
     },
 
     // Power-up Actions
     spawnPowerUp: (position) => {
       const { frameTime } = get();
-      const types: PowerUpType[] = ["speed", "webEnergy", "magnet", "slowTime"];
+      const types: PowerUpType[] = ["speed", "webEnergy", "magnet", "slowTime", "multiShot"];
       const type = types[Math.floor(Math.random() * types.length)];
 
       const powerUp: PowerUp = {
@@ -800,6 +947,18 @@ export const useGameStore = create<GameStore>()(
       const { gameState, dimensions, preyList } = get();
       if (gameState.gamePhase !== "playing") return;
 
+      // Handle freeze frame - skip physics updates but still update time
+      if (gameState.freezeFrame > 0) {
+        set((state) => ({
+          frameTime: Date.now(),
+          gameState: {
+            ...state.gameState,
+            freezeFrame: Math.max(0, state.gameState.freezeFrame - 16),
+          },
+        }));
+        return;
+      }
+
       // Update frame time once per tick
       const now = Date.now();
 
@@ -858,6 +1017,19 @@ export const useGameStore = create<GameStore>()(
         newY = spiderRadius;
         hitWall = true;
       } else if (newY > dimensions.height - GAME_CONFIG.physics.groundHeight) {
+        // Landing detection - create dust particles if falling fast
+        const wasAirborne = gameState.isJumping || gameState.isZipping;
+        const landingSpeed = Math.abs(gameState.velocity.y);
+        if (wasAirborne && landingSpeed > 5) {
+          get().addParticles(
+            createLandingParticles(
+              { x: newX, y: dimensions.height - GAME_CONFIG.physics.groundHeight },
+              gameState.velocity,
+              Math.min(12, Math.floor(landingSpeed))
+            )
+          );
+        }
+
         newY = dimensions.height - GAME_CONFIG.physics.groundHeight;
         newVelocity.y = 0;
         isJumping = false;
