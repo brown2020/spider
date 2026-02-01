@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useMemo, useState, useEffect } from 'react';
+import { useGameStore } from '@/stores/gameStore';
 
 interface Star {
   id: number;
@@ -28,6 +29,19 @@ interface EnvironmentProps {
 
 const Environment = memo(function Environment({ dimensions }: EnvironmentProps) {
   const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
+
+  // Get spider position for parallax effect
+  const spiderPosition = useGameStore((state) => state.gameState.position);
+  const combo = useGameStore((state) => state.gameState.combo);
+
+  // Calculate parallax offsets based on spider position relative to center
+  const parallaxOffset = useMemo(() => {
+    const centerX = dimensions.width / 2;
+    const centerY = dimensions.height / 2;
+    const offsetX = (spiderPosition.x - centerX) / centerX;
+    const offsetY = (spiderPosition.y - centerY) / centerY;
+    return { x: offsetX, y: offsetY };
+  }, [spiderPosition.x, spiderPosition.y, dimensions.width, dimensions.height]);
   
   // Generate stars with depth layers
   const stars = useMemo(() => {
@@ -90,7 +104,7 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
     })),
   []);
 
-  // Spawn shooting stars periodically
+  // Spawn shooting stars periodically - more during high combos
   useEffect(() => {
     const spawnShootingStar = () => {
       const id = Date.now();
@@ -102,24 +116,33 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
         speed: Math.random() * 2 + 3,
         length: Math.random() * 80 + 60,
       };
-      
+
       setShootingStars(prev => [...prev, newStar]);
-      
+
       // Remove after animation completes
       setTimeout(() => {
         setShootingStars(prev => prev.filter(s => s.id !== id));
       }, 2000);
     };
-    
+
+    // Spawn rate increases with combo
+    const baseChance = 0.3;
+    const comboBonus = Math.min(combo * 0.05, 0.4);
+    const spawnChance = baseChance + comboBonus;
+
     // Initial delay, then spawn randomly
     const interval = setInterval(() => {
-      if (Math.random() < 0.3) { // 30% chance every 3 seconds
+      if (Math.random() < spawnChance) {
         spawnShootingStar();
+        // Spawn extra stars during high combos
+        if (combo >= 5 && Math.random() < 0.5) {
+          setTimeout(spawnShootingStar, 200);
+        }
       }
-    }, 3000);
-    
+    }, combo >= 5 ? 2000 : 3000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [combo]);
 
   return (
     <div className="absolute inset-0 overflow-hidden">
@@ -189,14 +212,14 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
         />
       </div>
       
-      {/* Moon with enhanced glow */}
+      {/* Moon with enhanced glow and parallax */}
       <div
-        className="absolute rounded-full"
+        className="absolute rounded-full transition-transform duration-300 ease-out"
         style={{
           width: 90,
           height: 90,
-          top: '6%',
-          right: '10%',
+          top: `calc(6% + ${parallaxOffset.y * -15}px)`,
+          right: `calc(10% + ${parallaxOffset.x * 15}px)`,
           background: `
             radial-gradient(circle at 35% 35%,
               rgba(255, 255, 255, 0.98) 0%,
@@ -273,9 +296,14 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
         />
       ))}
       
-      {/* Stars layer */}
-      <div className="absolute inset-0">
-        {stars.map((star) => (
+      {/* Stars layer with parallax - different layers move at different speeds */}
+      <div
+        className="absolute inset-0 transition-transform duration-500 ease-out"
+        style={{
+          transform: `translate(${parallaxOffset.x * -5}px, ${parallaxOffset.y * -5}px)`,
+        }}
+      >
+        {stars.filter(s => s.type === 'distant').map((star) => (
           <div
             key={star.id}
             className="absolute rounded-full"
@@ -284,18 +312,55 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
               top: `${star.y}%`,
               width: star.size,
               height: star.size,
-              backgroundColor: star.type === 'bright' 
-                ? '#f0f8ff' 
-                : star.type === 'normal' 
-                  ? '#d0e0f0' 
-                  : '#90a8c8',
+              backgroundColor: '#90a8c8',
               opacity: star.opacity,
               animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
-              boxShadow: star.type === 'bright' 
-                ? `0 0 ${star.size * 3}px rgba(220, 240, 255, 0.7), 0 0 ${star.size * 6}px rgba(180, 210, 255, 0.3)` 
-                : star.type === 'normal'
-                  ? `0 0 ${star.size}px rgba(200, 220, 255, 0.3)`
-                  : 'none',
+            }}
+          />
+        ))}
+      </div>
+      <div
+        className="absolute inset-0 transition-transform duration-400 ease-out"
+        style={{
+          transform: `translate(${parallaxOffset.x * -10}px, ${parallaxOffset.y * -8}px)`,
+        }}
+      >
+        {stars.filter(s => s.type === 'normal').map((star) => (
+          <div
+            key={star.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${star.x}%`,
+              top: `${star.y}%`,
+              width: star.size,
+              height: star.size,
+              backgroundColor: '#d0e0f0',
+              opacity: star.opacity,
+              animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
+              boxShadow: `0 0 ${star.size}px rgba(200, 220, 255, 0.3)`,
+            }}
+          />
+        ))}
+      </div>
+      <div
+        className="absolute inset-0 transition-transform duration-300 ease-out"
+        style={{
+          transform: `translate(${parallaxOffset.x * -18}px, ${parallaxOffset.y * -12}px)`,
+        }}
+      >
+        {stars.filter(s => s.type === 'bright').map((star) => (
+          <div
+            key={star.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${star.x}%`,
+              top: `${star.y}%`,
+              width: star.size,
+              height: star.size,
+              backgroundColor: '#f0f8ff',
+              opacity: star.opacity,
+              animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
+              boxShadow: `0 0 ${star.size * 3}px rgba(220, 240, 255, 0.7), 0 0 ${star.size * 6}px rgba(180, 210, 255, 0.3)`,
             }}
           />
         ))}

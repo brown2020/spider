@@ -77,66 +77,111 @@ export function useGameLoop() {
 
 export function useControls() {
   const gamePhase = useGameStore((state) => state.gameState.gamePhase);
+  const gameState = useGameStore((state) => state.gameState);
   const setVelocity = useGameStore((state) => state.setVelocity);
   const setDirection = useGameStore((state) => state.setDirection);
   const setCrawling = useGameStore((state) => state.setCrawling);
   const jump = useGameStore((state) => state.jump);
+  const doubleJump = useGameStore((state) => state.doubleJump);
   const shootWeb = useGameStore((state) => state.shootWeb);
   const zipTo = useGameStore((state) => state.zipTo);
   const pauseGame = useGameStore((state) => state.pauseGame);
   const resumeGame = useGameStore((state) => state.resumeGame);
   const setMousePosition = useGameStore((state) => state.setMousePosition);
   const activePowerUps = useGameStore((state) => state.gameState.activePowerUps);
-  
+
   const keysPressed = useRef<Set<string>>(new Set());
-  
+  const targetVelocity = useRef({ x: 0, y: 0 });
+
   // Calculate speed with power-up bonus
   const getSpeed = useCallback((isRunning: boolean) => {
     const hasSpeedBoost = activePowerUps.some((p) => p.type === 'speed');
     const baseSpeed = isRunning ? GAME_CONFIG.spider.runSpeed : GAME_CONFIG.spider.baseSpeed;
     return hasSpeedBoost ? baseSpeed * GAME_CONFIG.powerUp.effects.speed : baseSpeed;
   }, [activePowerUps]);
-  
+
+  // Momentum-based movement - smoothly interpolate toward target velocity
+  useEffect(() => {
+    if (gamePhase !== 'playing') return;
+
+    const updateMovement = () => {
+      const currentVelocity = useGameStore.getState().gameState.velocity;
+      const isJumping = useGameStore.getState().gameState.isJumping;
+      const acceleration = GAME_CONFIG.movement.acceleration;
+      const deceleration = GAME_CONFIG.movement.deceleration;
+      const airControl = isJumping ? GAME_CONFIG.movement.airControl : 1;
+
+      // Smoothly interpolate X velocity (momentum-based)
+      let newVelX = currentVelocity.x;
+      if (targetVelocity.current.x !== 0) {
+        // Accelerate toward target
+        const diff = targetVelocity.current.x - currentVelocity.x;
+        newVelX += diff * acceleration * airControl;
+      } else {
+        // Decelerate when no input
+        newVelX *= deceleration;
+        if (Math.abs(newVelX) < 0.1) newVelX = 0;
+      }
+
+      // Only update if changed significantly
+      if (Math.abs(newVelX - currentVelocity.x) > 0.01) {
+        setVelocity({ x: newVelX });
+      }
+    };
+
+    const interval = setInterval(updateMovement, 16);
+    return () => clearInterval(interval);
+  }, [gamePhase, setVelocity]);
+
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gamePhase !== 'playing' && e.key !== 'Escape') return;
-      
+
+      const wasPressed = keysPressed.current.has(e.key);
       keysPressed.current.add(e.key);
       const speed = getSpeed(e.shiftKey);
-      
+
       switch (e.key) {
         case 'ArrowUp':
         case 'w':
         case 'W':
-          setVelocity({ y: -speed });
+          targetVelocity.current.y = -speed;
           setDirection('up');
           setCrawling(true);
           break;
         case 'ArrowDown':
         case 's':
         case 'S':
-          setVelocity({ y: speed });
+          targetVelocity.current.y = speed;
           setDirection('down');
           setCrawling(true);
           break;
         case 'ArrowLeft':
         case 'a':
         case 'A':
-          setVelocity({ x: -speed });
+          targetVelocity.current.x = -speed;
           setDirection('left');
           setCrawling(true);
           break;
         case 'ArrowRight':
         case 'd':
         case 'D':
-          setVelocity({ x: speed });
+          targetVelocity.current.x = speed;
           setDirection('right');
           setCrawling(true);
           break;
         case ' ':
           e.preventDefault();
-          jump();
+          // Double jump if already jumping and can double jump
+          if (!wasPressed) {
+            const state = useGameStore.getState().gameState;
+            if (state.isJumping && state.canDoubleJump) {
+              doubleJump();
+            } else if (!state.isJumping) {
+              jump();
+            }
+          }
           break;
         case 'Escape':
           if (gamePhase === 'playing') {
@@ -147,12 +192,12 @@ export function useControls() {
           break;
       }
     };
-    
+
     const handleKeyUp = (e: KeyboardEvent) => {
       if (gamePhase !== 'playing') return;
-      
+
       keysPressed.current.delete(e.key);
-      
+
       switch (e.key) {
         case 'ArrowUp':
         case 'ArrowDown':
@@ -160,12 +205,13 @@ export function useControls() {
         case 'W':
         case 's':
         case 'S':
-          if (!keysPressed.current.has('ArrowUp') && 
+          if (!keysPressed.current.has('ArrowUp') &&
               !keysPressed.current.has('ArrowDown') &&
               !keysPressed.current.has('w') &&
               !keysPressed.current.has('W') &&
               !keysPressed.current.has('s') &&
               !keysPressed.current.has('S')) {
+            targetVelocity.current.y = 0;
             setVelocity({ y: 0 });
           }
           break;
@@ -175,30 +221,30 @@ export function useControls() {
         case 'A':
         case 'd':
         case 'D':
-          if (!keysPressed.current.has('ArrowLeft') && 
+          if (!keysPressed.current.has('ArrowLeft') &&
               !keysPressed.current.has('ArrowRight') &&
               !keysPressed.current.has('a') &&
               !keysPressed.current.has('A') &&
               !keysPressed.current.has('d') &&
               !keysPressed.current.has('D')) {
-            setVelocity({ x: 0 });
+            targetVelocity.current.x = 0;
           }
           break;
       }
-      
+
       if (keysPressed.current.size === 0) {
         setCrawling(false);
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gamePhase, getSpeed, setVelocity, setDirection, setCrawling, jump, pauseGame, resumeGame]);
+  }, [gamePhase, getSpeed, setVelocity, setDirection, setCrawling, jump, doubleJump, pauseGame, resumeGame]);
   
   // Mouse controls
   useEffect(() => {

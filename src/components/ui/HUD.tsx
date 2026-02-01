@@ -1,10 +1,52 @@
 "use client";
 
-import { memo, useState, useEffect, useCallback } from "react";
+import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { GameState, ActivePowerUp } from "@/lib/types/game";
 import { GAME_CONFIG, POWER_UP_CONFIG } from "@/lib/constants/gameConfig";
 import { soundManager, playSound } from "@/lib/utils/sound";
 import { useGameStore } from "@/stores/gameStore";
+
+// Animated score counter hook
+function useAnimatedScore(targetScore: number, duration: number = 300) {
+  const [displayScore, setDisplayScore] = useState(targetScore);
+  const animationRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const startScoreRef = useRef<number>(targetScore);
+
+  useEffect(() => {
+    if (targetScore === displayScore) return;
+
+    startTimeRef.current = performance.now();
+    startScoreRef.current = displayScore;
+
+    const animate = (currentTime: number) => {
+      const elapsed = currentTime - startTimeRef.current;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Ease out cubic
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      const currentScore = Math.floor(
+        startScoreRef.current + (targetScore - startScoreRef.current) * easeProgress
+      );
+
+      setDisplayScore(currentScore);
+
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [targetScore, duration, displayScore]);
+
+  return displayScore;
+}
 
 interface HUDProps {
   gameState: GameState;
@@ -14,11 +56,27 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
   const { score, highScore, webEnergy, combo, difficulty, activePowerUps } =
     gameState;
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [scoreFlash, setScoreFlash] = useState(false);
+  const prevScoreRef = useRef(score);
+
+  // Animated score display
+  const displayScore = useAnimatedScore(score);
 
   // Initialize sound state
   useEffect(() => {
     setSoundEnabled(soundManager.isEnabled());
   }, []);
+
+  // Flash effect when score increases
+  useEffect(() => {
+    if (score > prevScoreRef.current) {
+      setScoreFlash(true);
+      const timer = setTimeout(() => setScoreFlash(false), 200);
+      prevScoreRef.current = score;
+      return () => clearTimeout(timer);
+    }
+    prevScoreRef.current = score;
+  }, [score]);
 
   const toggleSound = useCallback(() => {
     const newState = soundManager.toggle();
@@ -49,8 +107,17 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
             <div className="text-xs text-gray-400 uppercase tracking-wider mb-1">
               Score
             </div>
-            <div className="text-3xl font-bold score-value text-white">
-              {formatScore(score)}
+            <div
+              className={`text-3xl font-bold score-value text-white transition-all duration-100 ${
+                scoreFlash ? "scale-110 text-yellow-300" : ""
+              }`}
+              style={{
+                textShadow: scoreFlash
+                  ? "0 0 20px rgba(255, 215, 0, 0.8)"
+                  : undefined,
+              }}
+            >
+              {formatScore(displayScore)}
             </div>
             {score > 0 && score === highScore && (
               <div className="text-xs text-yellow-400 mt-1 high-score-new">
