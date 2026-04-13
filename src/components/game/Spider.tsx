@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useMemo } from 'react';
-import { GameState, Vector2D } from '@/lib/types/game';
+import { GameState } from '@/lib/types/game';
 import { GAME_CONFIG, POWER_UP_CONFIG } from '@/lib/constants/gameConfig';
 import { useSpriteAnimation } from '@/hooks/useSpriteAnimation';
 import { useGameStore } from '@/stores/gameStore';
@@ -14,12 +14,11 @@ interface SpiderProps {
 interface LegProps {
   index: number;
   side: 'left' | 'right';
-  velocity: Vector2D;
   isMoving: boolean;
   time: number;
 }
 
-const SpiderLeg = memo(function SpiderLeg({ index, side, velocity, isMoving, time }: LegProps) {
+const SpiderLeg = memo(function SpiderLeg({ index, side, isMoving, time }: LegProps) {
   // Base angles for 4 legs per side (front to back)
   const baseAngles = [25, 60, 120, 155];
   const baseAngle = side === 'left' ? 180 + baseAngles[index] : -baseAngles[index];
@@ -113,7 +112,7 @@ const Spider = memo(function Spider({ gameState }: SpiderProps) {
   }, [gameState.isJumping, gameState.isZipping, gameState.velocity.x]);
 
   const scale = useMemo(() => {
-    let baseScale = GAME_CONFIG.spider.scale;
+    const baseScale = GAME_CONFIG.spider.scale;
     
     // Squash and stretch during jump
     if (gameState.isJumping) {
@@ -260,7 +259,7 @@ const Spider = memo(function Spider({ gameState }: SpiderProps) {
               key={`left-${i}`}
               index={i}
               side="left"
-              velocity={gameState.velocity}
+
               isMoving={isMoving}
               time={frameTime}
             />
@@ -271,7 +270,7 @@ const Spider = memo(function Spider({ gameState }: SpiderProps) {
               key={`right-${i}`}
               index={i}
               side="right"
-              velocity={gameState.velocity}
+
               isMoving={isMoving}
               time={frameTime}
             />

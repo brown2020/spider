@@ -55,25 +55,23 @@ interface HUDProps {
 const HUD = memo(function HUD({ gameState }: HUDProps) {
   const { score, highScore, webEnergy, combo, difficulty, activePowerUps } =
     gameState;
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => soundManager.isEnabled());
   const [scoreFlash, setScoreFlash] = useState(false);
   const prevScoreRef = useRef(score);
 
   // Animated score display
   const displayScore = useAnimatedScore(score);
 
-  // Initialize sound state
-  useEffect(() => {
-    setSoundEnabled(soundManager.isEnabled());
-  }, []);
-
   // Flash effect when score increases
   useEffect(() => {
     if (score > prevScoreRef.current) {
-      setScoreFlash(true);
+      const id = requestAnimationFrame(() => setScoreFlash(true));
       const timer = setTimeout(() => setScoreFlash(false), 200);
       prevScoreRef.current = score;
-      return () => clearTimeout(timer);
+      return () => {
+        cancelAnimationFrame(id);
+        clearTimeout(timer);
+      };
     }
     prevScoreRef.current = score;
   }, [score]);
