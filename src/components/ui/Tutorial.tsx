@@ -78,23 +78,25 @@ const TUTORIAL_STEPS: TutorialStep[] = [
 const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [hasSeenTutorial, setHasSeenTutorial] = useState(true); // Default true to not flash
-  
+  const [hasSeenTutorial] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !!localStorage.getItem('spiderTutorialComplete');
+  });
+
   // Check if tutorial should show
   useEffect(() => {
-    const seen = localStorage.getItem('spiderTutorialComplete');
-    setHasSeenTutorial(!!seen);
-    
-    if (!seen && isPlaying) {
-      setIsVisible(true);
+    if (!hasSeenTutorial && isPlaying) {
+      requestAnimationFrame(() => setIsVisible(true));
     }
-  }, [isPlaying]);
+  }, [isPlaying, hasSeenTutorial]);
   
   // Hide when game starts playing and tutorial is done
   useEffect(() => {
     if (!isPlaying) {
-      setIsVisible(false);
-      setCurrentStep(0);
+      requestAnimationFrame(() => {
+        setIsVisible(false);
+        setCurrentStep(0);
+      });
     }
   }, [isPlaying]);
   

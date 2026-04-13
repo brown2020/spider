@@ -57,8 +57,7 @@ const Controls = memo(function Controls() {
   const handleJoystickStart = useCallback((e: React.TouchEvent) => {
     e.preventDefault();
     setJoystickActive(true);
-    
-    const touch = e.touches[0];
+
     const rect = joystickRef.current?.getBoundingClientRect();
     if (rect) {
       joystickCenter.current = {
@@ -116,7 +115,7 @@ const Controls = memo(function Controls() {
     jump();
   }, [jump]);
   
-  const handleShootWeb = useCallback((e: React.TouchEvent) => {
+  const handleShootWeb = useCallback(() => {
     // Shoot web toward center-right of screen
     const screenCenter = {
       x: window.innerWidth * 0.7,
@@ -129,18 +128,24 @@ const Controls = memo(function Controls() {
     // Zip toward where spider is facing
     const { position, direction } = gameState;
     const zipDistance = 200;
-    
-    let target = { ...position };
-    switch (direction) {
-      case 'right': target.x += zipDistance; break;
-      case 'left': target.x -= zipDistance; break;
-      case 'up': target.y -= zipDistance; break;
-      case 'down': target.y += zipDistance; break;
-    }
-    
+
+    const offsets: Record<string, { x: number; y: number }> = {
+      right: { x: zipDistance, y: 0 },
+      left: { x: -zipDistance, y: 0 },
+      up: { x: 0, y: -zipDistance },
+      down: { x: 0, y: zipDistance },
+    };
+    const offset = offsets[direction] ?? { x: 0, y: 0 };
+    const target = { x: position.x + offset.x, y: position.y + offset.y };
+
     zipTo(target);
   }, [gameState, zipTo]);
   
+  // Stop propagation helper to prevent web shooting when clicking UI
+  const stopPropagation = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+  }, []);
+
   // Render touch controls for mobile
   if (isTouchDevice) {
     return (
@@ -244,11 +249,6 @@ const Controls = memo(function Controls() {
     );
   }
   
-  // Stop propagation helper to prevent web shooting when clicking UI
-  const stopPropagation = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-  }, []);
-
   // Desktop controls help
   return (
     <div 
@@ -338,8 +338,9 @@ function TouchHint() {
     // Check if user has played before
     const hasPlayed = localStorage.getItem('spiderTouchHintShown');
     if (hasPlayed) {
-      setVisible(false);
-      return;
+      // Schedule state update to avoid synchronous setState in effect
+      const id = requestAnimationFrame(() => setVisible(false));
+      return () => cancelAnimationFrame(id);
     }
     
     const handleTouch = () => {
