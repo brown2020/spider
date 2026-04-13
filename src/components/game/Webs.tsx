@@ -55,8 +55,8 @@ function WebLine({ web }: WebLineProps) {
   const midY = (web.startPos.y + web.endPos.y) / 2;
 
   // Perpendicular offset for the sway
-  const perpX = -dy / length * sway;
-  const perpY = dx / length * sway;
+  const perpX = length > 0 ? (-dy / length * sway) : 0;
+  const perpY = length > 0 ? (dx / length * sway) : 0;
 
   const controlX = midX + perpX;
   const controlY = midY + perpY + sway * 0.5; // Slight gravity sag
@@ -193,7 +193,7 @@ function DewDrops({ startPos, controlPos, endPos, opacity, length, time }: DewDr
         shimmerOffset: i * 0.7,
       };
     });
-  }, [startPos.x, startPos.y, controlPos.x, controlPos.y, endPos.x, endPos.y, dropCount]);
+  }, [startPos, controlPos, endPos, dropCount]);
 
   if (drops.length === 0) return null;
 

@@ -23,6 +23,77 @@ interface ShootingStar {
   length: number;
 }
 
+// Simple seeded random for deterministic star generation
+function seededRandom(seed: number): () => number {
+  let s = seed;
+  return () => {
+    s = (s * 16807 + 0) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+// Pre-generate stars and particles at module level (deterministic)
+function generateStars(): Star[] {
+  const rng = seededRandom(42);
+  const starArray: Star[] = [];
+
+  for (let i = 0; i < 100; i++) {
+    starArray.push({
+      id: i,
+      x: rng() * 100,
+      y: rng() * 70,
+      size: rng() * 1 + 0.5,
+      opacity: rng() * 0.3 + 0.1,
+      duration: rng() * 6 + 4,
+      delay: rng() * 5,
+      type: 'distant',
+    });
+  }
+
+  for (let i = 100; i < 180; i++) {
+    starArray.push({
+      id: i,
+      x: rng() * 100,
+      y: rng() * 60,
+      size: rng() * 1.5 + 1,
+      opacity: rng() * 0.4 + 0.3,
+      duration: rng() * 4 + 2,
+      delay: rng() * 3,
+      type: 'normal',
+    });
+  }
+
+  for (let i = 180; i < 200; i++) {
+    starArray.push({
+      id: i,
+      x: rng() * 100,
+      y: rng() * 50,
+      size: rng() * 2 + 2,
+      opacity: rng() * 0.3 + 0.7,
+      duration: rng() * 3 + 2,
+      delay: rng() * 2,
+      type: 'bright',
+    });
+  }
+
+  return starArray;
+}
+
+function generateAmbientParticles() {
+  const rng = seededRandom(99);
+  return Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    x: rng() * 100,
+    y: 50 + rng() * 50,
+    size: rng() * 3 + 1,
+    duration: 10 + rng() * 15,
+    delay: rng() * 10,
+  }));
+}
+
+const STATIC_STARS = generateStars();
+const STATIC_AMBIENT_PARTICLES = generateAmbientParticles();
+
 interface EnvironmentProps {
   dimensions: { width: number; height: number };
 }
@@ -42,67 +113,9 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
     const offsetY = (spiderPosition.y - centerY) / centerY;
     return { x: offsetX, y: offsetY };
   }, [spiderPosition.x, spiderPosition.y, dimensions.width, dimensions.height]);
-  
-  // Generate stars with depth layers
-  const stars = useMemo(() => {
-    const starArray: Star[] = [];
-    
-    // Distant stars (small, subtle)
-    for (let i = 0; i < 100; i++) {
-      starArray.push({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 70,
-        size: Math.random() * 1 + 0.5,
-        opacity: Math.random() * 0.3 + 0.1,
-        duration: Math.random() * 6 + 4,
-        delay: Math.random() * 5,
-        type: 'distant',
-      });
-    }
-    
-    // Normal stars
-    for (let i = 100; i < 180; i++) {
-      starArray.push({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 60,
-        size: Math.random() * 1.5 + 1,
-        opacity: Math.random() * 0.4 + 0.3,
-        duration: Math.random() * 4 + 2,
-        delay: Math.random() * 3,
-        type: 'normal',
-      });
-    }
-    
-    // Bright stars (fewer, more prominent)
-    for (let i = 180; i < 200; i++) {
-      starArray.push({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 50,
-        size: Math.random() * 2 + 2,
-        opacity: Math.random() * 0.3 + 0.7,
-        duration: Math.random() * 3 + 2,
-        delay: Math.random() * 2,
-        type: 'bright',
-      });
-    }
-    
-    return starArray;
-  }, []);
 
-  // Ambient floating particles
-  const ambientParticles = useMemo(() => 
-    Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: 50 + Math.random() * 50,
-      size: Math.random() * 3 + 1,
-      duration: 10 + Math.random() * 15,
-      delay: Math.random() * 10,
-    })),
-  []);
+  const stars = STATIC_STARS;
+  const ambientParticles = STATIC_AMBIENT_PARTICLES;
 
   // Spawn shooting stars periodically - more during high combos
   useEffect(() => {

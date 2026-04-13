@@ -51,8 +51,10 @@ export default function GameContainer() {
     if (gameState.gamePhase === 'playing') {
       const hasSeenTutorial = localStorage.getItem('spiderTutorialComplete');
       if (!hasSeenTutorial) {
-        setShowTutorial(true);
-        pauseGame(); // Pause while tutorial is showing
+        requestAnimationFrame(() => {
+          setShowTutorial(true);
+          pauseGame();
+        });
       }
     }
   }, [gameState.gamePhase, pauseGame]);
@@ -65,10 +67,10 @@ export default function GameContainer() {
   const canShoot = gameState.webEnergy >= GAME_CONFIG.web.energy.shootCost;
   const isPlaying = gameState.gamePhase === 'playing';
 
-  // Calculate directional screen shake offset
+  // Derive deterministic shake jitter from screenShake value and direction (no Math.random, no ref)
   const shakeOffset = gameState.screenShake > 0 ? {
-    x: gameState.screenShakeDirection.x * gameState.screenShake * (Math.random() - 0.5) * 2,
-    y: gameState.screenShakeDirection.y * gameState.screenShake * (Math.random() - 0.5) * 2,
+    x: gameState.screenShakeDirection.x * gameState.screenShake * Math.sin(gameState.screenShake * 7.9) * 0.5,
+    y: gameState.screenShakeDirection.y * gameState.screenShake * Math.cos(gameState.screenShake * 11.3) * 0.5,
   } : { x: 0, y: 0 };
 
   return (

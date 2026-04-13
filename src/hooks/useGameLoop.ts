@@ -77,7 +77,6 @@ export function useGameLoop() {
 
 export function useControls() {
   const gamePhase = useGameStore((state) => state.gameState.gamePhase);
-  const gameState = useGameStore((state) => state.gameState);
   const setVelocity = useGameStore((state) => state.setVelocity);
   const setDirection = useGameStore((state) => state.setDirection);
   const setCrawling = useGameStore((state) => state.setCrawling);

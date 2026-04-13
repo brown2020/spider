@@ -14,9 +14,9 @@ export function useSpriteAnimation(
 
   useEffect(() => {
     if (!isPlaying) {
-      setCurrentFrame(0);
+      const id = requestAnimationFrame(() => setCurrentFrame(0));
       accumulatedTimeRef.current = 0;
-      return;
+      return () => cancelAnimationFrame(id);
     }
 
     const animate = (timestamp: number) => {

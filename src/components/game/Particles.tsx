@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import { Particle, ScorePopup } from "@/lib/types/game";
 import { useGameStore } from "@/stores/gameStore";
 import { GAME_CONFIG } from "@/lib/constants/gameConfig";
@@ -269,83 +269,6 @@ export const ScorePopups = memo(function ScorePopups({
           </div>
         );
       })}
-    </>
-  );
-});
-
-// Separate component for near-miss indicators
-interface NearMissProps {
-  position: { x: number; y: number };
-  onComplete: () => void;
-}
-
-export const NearMissIndicator = memo(function NearMissIndicator({
-  position,
-  onComplete,
-}: NearMissProps) {
-  return (
-    <div
-      className="absolute pointer-events-none near-miss-indicator"
-      style={{
-        left: position.x,
-        top: position.y,
-        transform: "translate(-50%, -50%)",
-        zIndex: 1050,
-      }}
-      onAnimationEnd={onComplete}
-    >
-      <div
-        className="text-sm font-bold text-yellow-400"
-        style={{
-          textShadow: "0 0 10px rgba(250, 204, 21, 0.8)",
-        }}
-      >
-        CLOSE!
-      </div>
-    </div>
-  );
-});
-
-// Ring burst effect for catches
-interface RingBurstProps {
-  position: { x: number; y: number };
-  color: string;
-  size: number;
-}
-
-export const RingBurst = memo(function RingBurst({
-  position,
-  color,
-  size,
-}: RingBurstProps) {
-  const rings = useMemo(
-    () => [
-      { delay: 0, scale: 1 },
-      { delay: 0.1, scale: 1.5 },
-      { delay: 0.2, scale: 2 },
-    ],
-    []
-  );
-
-  return (
-    <>
-      {rings.map((ring, i) => (
-        <div
-          key={i}
-          className="absolute rounded-full pointer-events-none pulse-ring"
-          style={{
-            left: position.x,
-            top: position.y,
-            width: size * ring.scale,
-            height: size * ring.scale,
-            transform: "translate(-50%, -50%)",
-            border: `2px solid ${color}`,
-            opacity: 0.6,
-            animationDelay: `${ring.delay}s`,
-            zIndex: 840,
-          }}
-        />
-      ))}
     </>
   );
 });

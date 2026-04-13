@@ -351,7 +351,6 @@ function ButterflySprite({
   config,
   wingScale = 1,
   isTrapped,
-  angle = 0,
 }: SpriteProps) {
   return (
     <div

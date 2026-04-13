@@ -229,32 +229,6 @@ export function createRingBurstParticles(
   }));
 }
 
-// Anticipation glow particles around prey when spider is near
-export function createAnticipationParticles(
-  position: Vector2D,
-  count: number = 6
-): Omit<Particle, "id" | "createdAt">[] {
-  return Array.from({ length: count }, (_, i) => {
-    const angle = (i / count) * Math.PI * 2;
-    const radius = 15;
-
-    return {
-      position: {
-        x: position.x + Math.cos(angle) * radius,
-        y: position.y + Math.sin(angle) * radius,
-      },
-      velocity: {
-        x: Math.cos(angle) * 0.5,
-        y: Math.sin(angle) * 0.5,
-      },
-      size: 3 + Math.random() * 2,
-      lifetime: 300,
-      color: "rgba(255, 255, 150, 0.9)",
-      type: "anticipation" as const,
-    };
-  });
-}
-
 // Landing dust particles
 export function createLandingParticles(
   position: Vector2D,

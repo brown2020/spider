@@ -122,15 +122,6 @@ export interface Particle {
   gravity?: number;
 }
 
-// Ring burst effect for visual feedback
-export interface RingBurstEffect {
-  id: string;
-  position: Vector2D;
-  color: string;
-  size: number;
-  createdAt: number;
-}
-
 export interface ScorePopup {
   id: string;
   position: Vector2D;
