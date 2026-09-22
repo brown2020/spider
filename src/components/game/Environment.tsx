@@ -1,111 +1,22 @@
-'use client';
+"use client";
 
-import { memo, useMemo, useState, useEffect } from 'react';
-import { useGameStore } from '@/stores/gameStore';
-
-interface Star {
-  id: number;
-  x: number;
-  y: number;
-  size: number;
-  opacity: number;
-  duration: number;
-  delay: number;
-  type: 'normal' | 'bright' | 'distant';
-}
-
-interface ShootingStar {
-  id: number;
-  startX: number;
-  startY: number;
-  angle: number;
-  speed: number;
-  length: number;
-}
-
-// Simple seeded random for deterministic star generation
-function seededRandom(seed: number): () => number {
-  let s = seed;
-  return () => {
-    s = (s * 16807 + 0) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
-
-// Pre-generate stars and particles at module level (deterministic)
-function generateStars(): Star[] {
-  const rng = seededRandom(42);
-  const starArray: Star[] = [];
-
-  for (let i = 0; i < 100; i++) {
-    starArray.push({
-      id: i,
-      x: rng() * 100,
-      y: rng() * 70,
-      size: rng() * 1 + 0.5,
-      opacity: rng() * 0.3 + 0.1,
-      duration: rng() * 6 + 4,
-      delay: rng() * 5,
-      type: 'distant',
-    });
-  }
-
-  for (let i = 100; i < 180; i++) {
-    starArray.push({
-      id: i,
-      x: rng() * 100,
-      y: rng() * 60,
-      size: rng() * 1.5 + 1,
-      opacity: rng() * 0.4 + 0.3,
-      duration: rng() * 4 + 2,
-      delay: rng() * 3,
-      type: 'normal',
-    });
-  }
-
-  for (let i = 180; i < 200; i++) {
-    starArray.push({
-      id: i,
-      x: rng() * 100,
-      y: rng() * 50,
-      size: rng() * 2 + 2,
-      opacity: rng() * 0.3 + 0.7,
-      duration: rng() * 3 + 2,
-      delay: rng() * 2,
-      type: 'bright',
-    });
-  }
-
-  return starArray;
-}
-
-function generateAmbientParticles() {
-  const rng = seededRandom(99);
-  return Array.from({ length: 20 }, (_, i) => ({
-    id: i,
-    x: rng() * 100,
-    y: 50 + rng() * 50,
-    size: rng() * 3 + 1,
-    duration: 10 + rng() * 15,
-    delay: rng() * 10,
-  }));
-}
-
-const STATIC_STARS = generateStars();
-const STATIC_AMBIENT_PARTICLES = generateAmbientParticles();
+import { memo, useMemo, useState, useEffect } from "react";
+import { useGameStore } from "@/stores/gameStore";
+import { ShootingStar } from "./environmentData";
+import { EnvironmentScene } from "./EnvironmentScene";
 
 interface EnvironmentProps {
   dimensions: { width: number; height: number };
 }
 
-const Environment = memo(function Environment({ dimensions }: EnvironmentProps) {
-  const [shootingStars, setShootingStars] = useState<ShootingStar[]>([]);
+type TimedStar = ShootingStar & { expiresAt: number };
 
-  // Get spider position for parallax effect
+const Environment = memo(function Environment({ dimensions }: EnvironmentProps) {
+  const [shootingStars, setShootingStars] = useState<TimedStar[]>([]);
+
   const spiderPosition = useGameStore((state) => state.gameState.position);
   const combo = useGameStore((state) => state.gameState.combo);
 
-  // Calculate parallax offsets based on spider position relative to center
   const parallaxOffset = useMemo(() => {
     const centerX = dimensions.width / 2;
     const centerY = dimensions.height / 2;
@@ -114,474 +25,53 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
     return { x: offsetX, y: offsetY };
   }, [spiderPosition.x, spiderPosition.y, dimensions.width, dimensions.height]);
 
-  const stars = STATIC_STARS;
-  const ambientParticles = STATIC_AMBIENT_PARTICLES;
-
-  // Spawn shooting stars periodically - more during high combos
   useEffect(() => {
     const spawnShootingStar = () => {
-      const id = Date.now();
-      const newStar: ShootingStar = {
+      const id = Date.now() + Math.random();
+      const newStar: TimedStar = {
         id,
-        startX: Math.random() * 60 + 10, // Start in upper portion
+        startX: Math.random() * 60 + 10,
         startY: Math.random() * 30 + 5,
-        angle: Math.random() * 30 + 30, // Angle between 30-60 degrees
+        angle: Math.random() * 30 + 30,
         speed: Math.random() * 2 + 3,
         length: Math.random() * 80 + 60,
+        expiresAt: Date.now() + 2000,
       };
-
-      setShootingStars(prev => [...prev, newStar]);
-
-      // Remove after animation completes
-      setTimeout(() => {
-        setShootingStars(prev => prev.filter(s => s.id !== id));
-      }, 2000);
+      setShootingStars((prev) => [
+        ...prev.filter((s) => s.expiresAt > Date.now()),
+        newStar,
+      ]);
     };
 
-    // Spawn rate increases with combo
     const baseChance = 0.3;
     const comboBonus = Math.min(combo * 0.05, 0.4);
     const spawnChance = baseChance + comboBonus;
 
-    // Initial delay, then spawn randomly
     const interval = setInterval(() => {
       if (Math.random() < spawnChance) {
         spawnShootingStar();
-        // Spawn extra stars during high combos
         if (combo >= 5 && Math.random() < 0.5) {
-          setTimeout(spawnShootingStar, 200);
+          spawnShootingStar();
         }
       }
+      setShootingStars((prev) => prev.filter((s) => s.expiresAt > Date.now()));
     }, combo >= 5 ? 2000 : 3000);
 
     return () => clearInterval(interval);
   }, [combo]);
 
+  const visibleStars = useMemo(
+    () => shootingStars.map(({ expiresAt: _e, ...star }) => star),
+    [shootingStars]
+  );
+
   return (
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Base gradient background with richer colors */}
-      <div 
-        className="absolute inset-0"
-        style={{ 
-          width: dimensions.width, 
-          height: dimensions.height,
-          background: `
-            radial-gradient(ellipse 120% 80% at 50% 120%, rgba(20, 50, 80, 0.6) 0%, transparent 50%),
-            radial-gradient(ellipse 100% 80% at 20% 0%, rgba(40, 60, 100, 0.4) 0%, transparent 50%),
-            radial-gradient(ellipse 80% 60% at 85% 15%, rgba(60, 30, 80, 0.3) 0%, transparent 40%),
-            linear-gradient(to bottom, 
-              #030508 0%, 
-              #050a12 20%, 
-              #081020 40%, 
-              #0a1528 60%, 
-              #0c1830 80%,
-              #101830 100%
-            )
-          `,
-        }}
-      />
-      
-      {/* Aurora borealis effect */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div 
-          className="absolute aurora"
-          style={{
-            width: '200%',
-            height: '40%',
-            top: '5%',
-            left: '-50%',
-            background: `
-              linear-gradient(180deg,
-                transparent 0%,
-                rgba(100, 200, 150, 0.03) 20%,
-                rgba(50, 150, 200, 0.05) 40%,
-                rgba(100, 100, 200, 0.03) 60%,
-                transparent 100%
-              )
-            `,
-            filter: 'blur(30px)',
-            transform: 'skewX(-10deg)',
-          }}
-        />
-        <div 
-          className="absolute aurora"
-          style={{
-            width: '150%',
-            height: '30%',
-            top: '8%',
-            left: '-25%',
-            background: `
-              linear-gradient(180deg,
-                transparent 0%,
-                rgba(100, 180, 255, 0.04) 30%,
-                rgba(150, 100, 200, 0.03) 70%,
-                transparent 100%
-              )
-            `,
-            filter: 'blur(40px)',
-            transform: 'skewX(5deg)',
-            animationDelay: '2s',
-          }}
-        />
-      </div>
-      
-      {/* Moon with enhanced glow and parallax */}
-      <div
-        className="absolute rounded-full transition-transform duration-300 ease-out"
-        style={{
-          width: 90,
-          height: 90,
-          top: `calc(6% + ${parallaxOffset.y * -15}px)`,
-          right: `calc(10% + ${parallaxOffset.x * 15}px)`,
-          background: `
-            radial-gradient(circle at 35% 35%,
-              rgba(255, 255, 255, 0.98) 0%,
-              rgba(230, 240, 255, 0.95) 20%,
-              rgba(200, 220, 245, 0.85) 40%,
-              rgba(150, 180, 220, 0.4) 70%,
-              transparent 100%
-            )
-          `,
-          boxShadow: `
-            0 0 60px rgba(200, 220, 255, 0.4),
-            0 0 100px rgba(150, 180, 220, 0.25),
-            0 0 150px rgba(100, 140, 180, 0.15),
-            inset -10px -10px 30px rgba(150, 170, 200, 0.3)
-          `,
-        }}
-      >
-        {/* Moon craters */}
-        <div 
-          className="absolute rounded-full"
-          style={{
-            width: 12,
-            height: 12,
-            top: '25%',
-            left: '30%',
-            background: 'rgba(180, 200, 220, 0.3)',
-            boxShadow: 'inset 1px 1px 3px rgba(0,0,0,0.2)',
-          }}
-        />
-        <div 
-          className="absolute rounded-full"
-          style={{
-            width: 8,
-            height: 8,
-            top: '50%',
-            left: '55%',
-            background: 'rgba(180, 200, 220, 0.25)',
-            boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.15)',
-          }}
-        />
-        <div 
-          className="absolute rounded-full"
-          style={{
-            width: 6,
-            height: 6,
-            top: '65%',
-            left: '35%',
-            background: 'rgba(180, 200, 220, 0.2)',
-          }}
-        />
-      </div>
-      
-      {/* Shooting stars */}
-      {shootingStars.map((star) => (
-        <div
-          key={star.id}
-          className="absolute pointer-events-none shooting-star"
-          style={{
-            left: `${star.startX}%`,
-            top: `${star.startY}%`,
-            width: star.length,
-            height: 2,
-            background: `linear-gradient(90deg, 
-              transparent 0%,
-              rgba(255, 255, 255, 0.1) 30%,
-              rgba(200, 220, 255, 0.8) 70%,
-              rgba(255, 255, 255, 1) 100%
-            )`,
-            transform: `rotate(${star.angle}deg)`,
-            transformOrigin: 'right center',
-            boxShadow: '0 0 6px rgba(200, 220, 255, 0.8)',
-            animation: `shooting-star-move ${star.speed}s ease-out forwards`,
-          }}
-        />
-      ))}
-      
-      {/* Stars layer with parallax - different layers move at different speeds */}
-      <div
-        className="absolute inset-0 transition-transform duration-500 ease-out"
-        style={{
-          transform: `translate(${parallaxOffset.x * -5}px, ${parallaxOffset.y * -5}px)`,
-        }}
-      >
-        {stars.filter(s => s.type === 'distant').map((star) => (
-          <div
-            key={star.id}
-            className="absolute rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: star.size,
-              height: star.size,
-              backgroundColor: '#90a8c8',
-              opacity: star.opacity,
-              animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
-            }}
-          />
-        ))}
-      </div>
-      <div
-        className="absolute inset-0 transition-transform duration-400 ease-out"
-        style={{
-          transform: `translate(${parallaxOffset.x * -10}px, ${parallaxOffset.y * -8}px)`,
-        }}
-      >
-        {stars.filter(s => s.type === 'normal').map((star) => (
-          <div
-            key={star.id}
-            className="absolute rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: star.size,
-              height: star.size,
-              backgroundColor: '#d0e0f0',
-              opacity: star.opacity,
-              animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
-              boxShadow: `0 0 ${star.size}px rgba(200, 220, 255, 0.3)`,
-            }}
-          />
-        ))}
-      </div>
-      <div
-        className="absolute inset-0 transition-transform duration-300 ease-out"
-        style={{
-          transform: `translate(${parallaxOffset.x * -18}px, ${parallaxOffset.y * -12}px)`,
-        }}
-      >
-        {stars.filter(s => s.type === 'bright').map((star) => (
-          <div
-            key={star.id}
-            className="absolute rounded-full"
-            style={{
-              left: `${star.x}%`,
-              top: `${star.y}%`,
-              width: star.size,
-              height: star.size,
-              backgroundColor: '#f0f8ff',
-              opacity: star.opacity,
-              animation: `twinkle ${star.duration}s ease-in-out ${star.delay}s infinite`,
-              boxShadow: `0 0 ${star.size * 3}px rgba(220, 240, 255, 0.7), 0 0 ${star.size * 6}px rgba(180, 210, 255, 0.3)`,
-            }}
-          />
-        ))}
-      </div>
-      
-      {/* Nebula/cloud layers */}
-      <div 
-        className="absolute pointer-events-none"
-        style={{
-          width: '70%',
-          height: '45%',
-          left: '0%',
-          top: '8%',
-          background: 'radial-gradient(ellipse at 40% 50%, rgba(60, 40, 100, 0.12) 0%, transparent 70%)',
-          filter: 'blur(50px)',
-        }}
-      />
-      <div 
-        className="absolute pointer-events-none"
-        style={{
-          width: '55%',
-          height: '40%',
-          right: '-5%',
-          top: '20%',
-          background: 'radial-gradient(ellipse at 60% 50%, rgba(30, 60, 100, 0.1) 0%, transparent 70%)',
-          filter: 'blur(60px)',
-        }}
-      />
-      <div 
-        className="absolute pointer-events-none"
-        style={{
-          width: '40%',
-          height: '30%',
-          left: '30%',
-          top: '15%',
-          background: 'radial-gradient(ellipse, rgba(80, 50, 120, 0.08) 0%, transparent 70%)',
-          filter: 'blur(40px)',
-        }}
-      />
-      
-      {/* Ambient floating particles (dust/pollen) */}
-      {ambientParticles.map((particle) => (
-        <div
-          key={`ambient-${particle.id}`}
-          className="absolute rounded-full ambient-particle"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: particle.size,
-            height: particle.size,
-            backgroundColor: 'rgba(200, 220, 255, 0.4)',
-            animationDuration: `${particle.duration}s`,
-            animationDelay: `${particle.delay}s`,
-            boxShadow: '0 0 4px rgba(200, 220, 255, 0.3)',
-          }}
-        />
-      ))}
-      
-      {/* Distant treeline silhouette with more detail */}
-      <div 
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{
-          height: '18%',
-          background: `
-            linear-gradient(to right,
-              transparent 0%,
-              rgba(6, 12, 20, 0.95) 8%,
-              rgba(8, 15, 25, 1) 25%,
-              rgba(6, 12, 20, 0.98) 45%,
-              rgba(8, 15, 25, 1) 65%,
-              rgba(6, 12, 20, 0.95) 85%,
-              transparent 100%
-            )
-          `,
-          clipPath: `polygon(
-            0% 100%,
-            0% 85%,
-            3% 75%,
-            5% 78%,
-            8% 65%,
-            10% 70%,
-            13% 55%,
-            15% 60%,
-            17% 48%,
-            20% 55%,
-            22% 42%,
-            25% 50%,
-            27% 38%,
-            30% 45%,
-            32% 32%,
-            35% 42%,
-            37% 35%,
-            40% 28%,
-            42% 38%,
-            45% 25%,
-            47% 35%,
-            50% 22%,
-            52% 32%,
-            55% 28%,
-            57% 38%,
-            60% 25%,
-            62% 35%,
-            65% 30%,
-            68% 40%,
-            70% 32%,
-            73% 45%,
-            75% 35%,
-            78% 48%,
-            80% 38%,
-            83% 52%,
-            85% 42%,
-            88% 58%,
-            90% 48%,
-            93% 62%,
-            95% 52%,
-            97% 70%,
-            100% 58%,
-            100% 100%
-          )`,
-        }}
-      />
-      
-      {/* Secondary treeline (closer, darker) */}
-      <div 
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{
-          height: '12%',
-          background: 'rgba(4, 8, 15, 0.98)',
-          clipPath: `polygon(
-            0% 100%,
-            0% 70%,
-            5% 55%,
-            10% 65%,
-            15% 45%,
-            20% 55%,
-            25% 40%,
-            30% 52%,
-            35% 35%,
-            40% 48%,
-            45% 30%,
-            50% 45%,
-            55% 32%,
-            60% 48%,
-            65% 38%,
-            70% 52%,
-            75% 42%,
-            80% 58%,
-            85% 48%,
-            90% 62%,
-            95% 52%,
-            100% 68%,
-            100% 100%
-          )`,
-        }}
-      />
-      
-      {/* Ground fog layer with gradient */}
-      <div 
-        className="absolute bottom-0 left-0 right-0 pointer-events-none"
-        style={{ 
-          height: '25%',
-          background: `
-            linear-gradient(to top,
-              rgba(20, 40, 70, 0.5) 0%,
-              rgba(25, 45, 75, 0.35) 30%,
-              rgba(30, 50, 80, 0.15) 60%,
-              transparent 100%
-            )
-          `,
-        }}
-      />
-      
-      {/* Animated fog wisps */}
-      <div 
-        className="absolute bottom-0 left-0 right-0 pointer-events-none overflow-hidden"
-        style={{ height: '20%' }}
-      >
-        <div 
-          className="absolute w-[200%] h-full"
-          style={{
-            background: `
-              radial-gradient(ellipse 30% 60% at 20% 80%, rgba(40, 60, 100, 0.2) 0%, transparent 50%),
-              radial-gradient(ellipse 25% 50% at 50% 70%, rgba(35, 55, 90, 0.15) 0%, transparent 50%),
-              radial-gradient(ellipse 35% 70% at 80% 85%, rgba(45, 65, 105, 0.18) 0%, transparent 50%)
-            `,
-            animation: 'fog-drift 30s ease-in-out infinite',
-          }}
-        />
-      </div>
-      
-      {/* Vignette overlay */}
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: `
-            radial-gradient(ellipse 80% 70% at 50% 50%, transparent 30%, rgba(0, 0, 0, 0.5) 100%)
-          `,
-        }}
-      />
-      
-      {/* Subtle grain/noise texture */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.015]"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-        }}
-      />
-    </div>
+    <EnvironmentScene
+      dimensions={dimensions}
+      parallaxOffset={parallaxOffset}
+      shootingStars={visibleStars}
+      combo={combo}
+    />
   );
 });
 

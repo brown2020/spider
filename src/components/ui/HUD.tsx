@@ -106,7 +106,7 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
               Score
             </div>
             <div
-              className={`text-3xl font-bold score-value text-white transition-all duration-100 ${
+              className={`text-3xl font-bold score-value text-white transition-[transform,color,text-shadow] duration-100 ${
                 scoreFlash ? "scale-110 text-yellow-300" : ""
               }`}
               style={{
@@ -145,7 +145,7 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
             </div>
             <div className="w-36 h-2.5 bg-gray-800 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-200 ${
+                className={`h-full rounded-full transition-[width,background-color] duration-200 ${
                   isLowEnergy ? "energy-bar-low" : "energy-bar"
                 }`}
                 style={{ width: `${energyPercent}%` }}
@@ -194,7 +194,7 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
             </div>
             <div className="w-24 h-2 bg-gray-800 rounded-full overflow-hidden">
               <div
-                className="h-full difficulty-bar rounded-full transition-all duration-500"
+                className="h-full difficulty-bar rounded-full transition-[width] duration-500"
                 style={{
                   width: `${Math.min(
                     100,
@@ -212,12 +212,14 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
 
           {/* Sound Toggle */}
           <button
+            type="button"
+            aria-label={soundEnabled ? "Mute sound" : "Enable sound"}
             onClick={(e) => {
               e.stopPropagation();
               toggleSound();
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            className="glass-panel rounded-lg px-4 py-2 pointer-events-auto flex items-center justify-between gap-3 transition-all hover:bg-white/5"
+            className="glass-panel rounded-lg px-4 py-2 pointer-events-auto flex items-center justify-between gap-3 transition-colors hover:bg-white/5"
           >
             <span className="text-xs text-gray-400 uppercase tracking-wider">
               Sound
@@ -264,7 +266,7 @@ function PowerUpIndicator({ powerUp }: PowerUpIndicatorProps) {
           stroke={config.color}
           strokeWidth="2"
           strokeDasharray={`${progress * 100} 100`}
-          className="transition-all duration-100"
+          className="transition-[transform,color,text-shadow] duration-100"
         />
       </svg>
     </div>

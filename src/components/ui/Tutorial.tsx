@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useEffect, useCallback } from 'react';
+import { memo, useState, useEffect, useCallback, useRef } from 'react';
 
 interface TutorialProps {
   isPlaying: boolean;
@@ -117,22 +117,30 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
     onComplete();
   }, [onComplete]);
   
-  // Keyboard navigation
+  const handleNextRef = useRef(handleNext);
+  const handleSkipRef = useRef(handleSkip);
+
+  useEffect(() => {
+    handleNextRef.current = handleNext;
+    handleSkipRef.current = handleSkip;
+  }, [handleNext, handleSkip]);
+
+  // Keyboard navigation (stable listener; callbacks via refs)
   useEffect(() => {
     if (!isVisible) return;
-    
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowRight') {
         e.preventDefault();
-        handleNext();
+        handleNextRef.current();
       } else if (e.key === 'Escape') {
-        handleSkip();
+        handleSkipRef.current();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isVisible, handleNext, handleSkip]);
+  }, [isVisible]);
   
   if (!isVisible || hasSeenTutorial) return null;
   
@@ -162,7 +170,7 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
           {/* Progress bar */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gray-800">
             <div 
-              className="h-full transition-all duration-300 ease-out"
+              className="h-full transition-[width] duration-300 ease-out"
               style={{
                 width: `${progress}%`,
                 background: 'linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%)',
@@ -210,7 +218,7 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
           <div className="flex gap-3">
             <button
               onClick={handleSkip}
-              className="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-all hover:bg-white/5"
+              className="flex-1 py-3 px-4 rounded-xl font-medium text-sm transition-colors hover:bg-white/5"
               style={{
                 border: '1px solid rgba(148, 163, 184, 0.2)',
                 color: 'rgba(148, 163, 184, 0.7)',
@@ -220,7 +228,7 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
             </button>
             <button
               onClick={handleNext}
-              className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
               style={{
                 background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.9) 0%, rgba(37, 99, 235, 1) 100%)',
                 border: '1px solid rgba(147, 197, 253, 0.3)',
