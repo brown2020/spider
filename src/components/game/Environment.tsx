@@ -61,7 +61,11 @@ const Environment = memo(function Environment({ dimensions }: EnvironmentProps) 
   }, [combo]);
 
   const visibleStars = useMemo(
-    () => shootingStars.map(({ expiresAt: _e, ...star }) => star),
+    () =>
+      shootingStars.map(({ expiresAt, ...star }) => {
+        void expiresAt;
+        return star;
+      }),
     [shootingStars]
   );
 
