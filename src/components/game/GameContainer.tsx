@@ -74,7 +74,8 @@ export default function GameContainer() {
   } : { x: 0, y: 0 };
 
   return (
-    <div
+    <main
+      aria-label="Spider game"
       className="fixed inset-0 w-screen h-screen overflow-hidden"
       style={{
         cursor: isPlaying ? (canShoot ? 'crosshair' : 'not-allowed') : 'default',
@@ -147,7 +148,7 @@ export default function GameContainer() {
           }}
         />
       )}
-    </div>
+    </main>
   );
 }
 

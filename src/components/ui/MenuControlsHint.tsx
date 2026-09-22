@@ -14,12 +14,12 @@ const CONTROLS = [
 export const MenuControlsHint = memo(function MenuControlsHint() {
   return (
     <div className="mt-8 pt-6 border-t border-white/5">
-      <h3
+      <p
         className="text-center text-sm font-semibold mb-4"
         style={{ color: "rgba(148, 180, 220, 0.7)" }}
       >
         Controls
-      </h3>
+      </p>
       <div className="grid grid-cols-2 gap-3 text-xs">
         {CONTROLS.map((control) => (
           <div key={control.label} className="flex items-center gap-2">

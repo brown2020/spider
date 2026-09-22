@@ -51,7 +51,7 @@ export const DesktopControlsHelp = memo(function DesktopControlsHelp() {
         }}
       >
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-gray-300 font-semibold text-sm">Controls</h3>
+          <p className="text-gray-300 font-semibold text-sm">Controls</p>
           <form method="dialog">
             <button
               type="submit"

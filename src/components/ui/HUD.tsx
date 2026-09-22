@@ -106,6 +106,9 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
               Score
             </div>
             <div
+              role="status"
+              aria-live="polite"
+              aria-label="Score"
               className={`text-3xl font-bold score-value text-white transition-[transform,color,text-shadow] duration-100 ${
                 scoreFlash ? "scale-110 text-yellow-300" : ""
               }`}
