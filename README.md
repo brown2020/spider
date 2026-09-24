@@ -1,299 +1,119 @@
-# Spider Game 🕷️
+# Spider
 
-A fast-paced web hunting arcade game built with Next.js 16, React 19, and TypeScript. Control a spider in a beautiful atmospheric night environment—spin webs to trap prey, zip across the screen, build combos, and survive as long as you can!
+A fast-paced browser arcade game: control a spider in a night scene, shoot webs to trap prey, zip around the screen, chain combos, and grab power-ups. Fully client-side — no accounts, APIs, or env secrets required.
 
-🎮 **[Play Now](https://spiderdemo.vercel.app/)**
+**Live demo:** [https://spiderdemo.vercel.app](https://spiderdemo.vercel.app/)
 
-![Spider Game Screenshot](public/spider-sprite.png)
+## Features
 
-## ✨ Features
+- **Web hunting** — left-click to shoot webs; trap moths, fireflies, beetles, butterflies, dragonflies, and rare golden moths
+- **Movement** — WASD / arrows, jump (Space), run (Shift), right-click zip-to-cursor; touch joystick + buttons on mobile
+- **Combos & scoring** — chain catches for multipliers; high score saved in `localStorage` (`spiderHighScore`)
+- **Power-ups** — Speed Boost, Web Refill, Prey Magnet, Multi Web, Slow Motion
+- **Progressive difficulty** — spawn and pacing scale with score (see `GAME_CONFIG`)
+- **Atmosphere** — night sky, aurora, particles, screen shake, sprite animation
+- **Audio** — procedural SFX via the Web Audio API (toggle in-game); no audio asset downloads
+- **Tutorial & menus** — onboarding, pause, and game-over flows
+- **About page** — `/about`
 
-### Gameplay
+## Tech stack
 
-- **Web Shooting** — Click to shoot webs that trap passing prey
-- **Zip Movement** — Right-click to zip quickly toward any location
-- **Combo System** — Chain catches for multiplier bonuses up to 10x
-- **Power-ups** — Collect speed boosts, web energy refills, prey magnets, and slow motion
-- **Progressive Difficulty** — Game scales as your score increases
-- **High Score Tracking** — Persistent local storage for your best scores
+| Layer | Choice |
+| --- | --- |
+| Framework | Next.js `^16.3.6` (App Router) |
+| UI | React `^19.3.0`, Tailwind CSS `^4.3.3`, Geist fonts |
+| Language | TypeScript `^6` |
+| State | Zustand `^5` (`subscribeWithSelector`) |
+| Tests | Node.js test runner via `tsx` |
+| Lint | ESLint `^10` + `eslint-config-next` |
 
-### Prey Types
+No Firebase, Stripe, or AI dependencies.
 
-| Prey         | Behavior            | Points |
-| ------------ | ------------------- | ------ |
-| 🦋 Moth      | Wandering           | 100    |
-| ✨ Firefly   | Hovering, glowing   | 150    |
-| 🪲 Beetle    | Slow, armored       | 200    |
-| 🦋 Butterfly | Erratic movement    | 250    |
-| 🪰 Dragonfly | Fast, hard to catch | 300    |
+## Project structure
 
-### Visual Effects
+```
+src/
+  app/                 # /, /about
+  components/
+    game/              # GameContainer, spider, prey, webs, environment, particles, power-ups
+    ui/                # HUD, menus, controls, tutorial, touch UI
+  hooks/               # useGameLoop, useSpriteAnimation
+  stores/              # gameStore (tick loop + entities)
+  lib/
+    constants/         # GAME_CONFIG, PREY_TYPES, POWER_UP_CONFIG, sprites
+    types/             # game entity types
+    utils/             # particles, sound
+    scoring.ts         # scoring helpers (+ tests)
+public/                # sprites / assets
+docs/                  # architecture / budget notes
+.github/workflows/ci.yml
+```
 
-- Atmospheric starlit night sky with aurora effects
-- Dynamic particle systems for all interactions
-- Smooth 60fps sprite animations
-- Screen shake and combo celebrations
-- Procedural moon, shooting stars, and ambient fog
-
-### Audio
-
-- Procedurally generated sound effects using Web Audio API
-- No external audio files required
-- Toggle sound on/off in-game
-
-### Controls
-
-- **Full keyboard + mouse support** for desktop
-- **Touch controls** with virtual joystick for mobile
-- **Tutorial system** for new players
-
-## 🎮 How to Play
-
-### Desktop Controls
-
-| Input                        | Action          |
-| ---------------------------- | --------------- |
-| `W` `A` `S` `D` / Arrow Keys | Move            |
-| `Space`                      | Jump            |
-| `Shift`                      | Run (hold)      |
-| `Left Click`                 | Shoot Web       |
-| `Right Click`                | Zip to location |
-| `Escape`                     | Pause           |
-
-### Mobile Controls
-
-- **Left joystick** — Movement
-- **Jump button** — Jump
-- **Web button** — Shoot web forward
-- **Zip button** — Quick dash in facing direction
-
-### Tips
-
-- Trap prey in webs before catching them for easier collection
-- Build combos by catching prey in quick succession
-- Manage your web energy—it regenerates over time
-- Power-ups spawn when catching prey, especially during combos
-- Dragonflies are worth the most but hardest to catch!
-
-## 🛠️ Tech Stack
-
-### Core
-
-| Package                                       | Version | Purpose                         |
-| --------------------------------------------- | ------- | ------------------------------- |
-| [Next.js](https://nextjs.org/)                | 16.0.3  | React framework with App Router |
-| [React](https://react.dev/)                   | 19.0.0  | UI library                      |
-| [TypeScript](https://www.typescriptlang.org/) | 5.x     | Type safety                     |
-
-### State & Animation
-
-| Package                                         | Version  | Purpose                 |
-| ----------------------------------------------- | -------- | ----------------------- |
-| [Zustand](https://zustand-demo.pmnd.rs/)        | 5.0.8    | Global state management |
-| [Framer Motion](https://www.framer.com/motion/) | 12.23.24 | Animation library       |
-
-### Styling
-
-| Package                                  | Version | Purpose           |
-| ---------------------------------------- | ------- | ----------------- |
-| [Tailwind CSS](https://tailwindcss.com/) | 4.0.8   | Utility-first CSS |
-| [PostCSS](https://postcss.org/)          | 8.4.47  | CSS processing    |
-
-### Development
-
-| Package                                                                       | Version | Purpose              |
-| ----------------------------------------------------------------------------- | ------- | -------------------- |
-| [ESLint](https://eslint.org/)                                                 | 9.15.0  | Code linting         |
-| [eslint-config-next](https://nextjs.org/docs/app/api-reference/config/eslint) | 16.0.3  | Next.js ESLint rules |
-
-## 🚀 Getting Started
+## Getting started
 
 ### Prerequisites
 
-- **Node.js** 18.17 or higher
-- **npm**, **yarn**, **pnpm**, or **bun**
+- Node.js 22+
+- npm
 
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone https://github.com/brown2020/spider.git
-   cd spider
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
-
-3. **Start the development server**
-
-   ```bash
-   npm run dev
-   ```
-
-4. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
-
-### Build for Production
+### Clone and install
 
 ```bash
-npm run build
-npm start
+git clone https://github.com/brown2020/spider.git
+cd spider
+npm install
 ```
 
-## 📁 Project Structure
+### Environment variables
 
-```
-spider/
-├── public/
-│   └── spider-sprite.png      # Spider sprite sheet
-├── src/
-│   ├── app/
-│   │   ├── layout.tsx         # Root layout with metadata
-│   │   ├── page.tsx           # Home page (game entry)
-│   │   ├── globals.css        # Global styles & animations
-│   │   └── fonts/             # Custom fonts (Geist)
-│   ├── components/
-│   │   ├── ClientWrapper.tsx  # Client-side game loader
-│   │   ├── game/
-│   │   │   ├── GameContainer.tsx  # Main game orchestrator
-│   │   │   ├── Spider.tsx         # Player character
-│   │   │   ├── Prey.tsx           # Prey entities
-│   │   │   ├── Webs.tsx           # Web projectiles
-│   │   │   ├── Particles.tsx      # Particle effects
-│   │   │   ├── PowerUps.tsx       # Power-up collectibles
-│   │   │   └── Environment.tsx    # Background & atmosphere
-│   │   └── ui/
-│   │       ├── HUD.tsx            # Score, energy, combos
-│   │       ├── Menu.tsx           # Main/pause/game over menus
-│   │       ├── Controls.tsx       # Touch controls & help
-│   │       └── Tutorial.tsx       # New player tutorial
-│   ├── hooks/
-│   │   ├── useGameLoop.ts         # Game loop & input handling
-│   │   └── useSpriteAnimation.ts  # Sprite frame animation
-│   ├── stores/
-│   │   └── gameStore.ts           # Zustand global state
-│   └── lib/
-│       ├── constants/
-│       │   ├── gameConfig.ts      # All game tuning values
-│       │   └── sprites.ts         # Sprite sheet definitions
-│       ├── types/
-│       │   └── game.ts            # TypeScript interfaces
-│       └── utils/
-│           ├── particles.ts       # Particle factory functions
-│           └── sound.ts           # Web Audio sound manager
-├── package.json
-├── tsconfig.json
-├── next.config.mjs
-├── postcss.config.mjs
-└── README.md
+None required for local or production builds.
+
+### Run locally
+
+```bash
+npm run dev
 ```
 
-## ⚙️ Configuration
+Open [http://localhost:3000](http://localhost:3000).
 
-All game balance values are centralized in `src/lib/constants/gameConfig.ts`:
+### Controls (desktop)
 
-```typescript
-GAME_CONFIG = {
-  spider: { baseSpeed, runSpeed, jumpForce, catchRadius, ... },
-  physics: { gravity, friction, zipSpeed, ... },
-  web: { duration, energy: { max, regenRate, shootCost }, ... },
-  prey: { baseSpawnRate, maxOnScreen, fleeRadius, ... },
-  combo: { duration, multiplierCap, ... },
-  difficulty: { scaleRate, maxMultiplier, ... },
-  powerUp: { spawnChance, duration, effects: { ... } },
-  particles: { maxCount, ... },
-  effects: { screenShakeDuration, scorePopupDuration },
-}
-```
+| Input | Action |
+| --- | --- |
+| `W` `A` `S` `D` / arrows | Move |
+| `Space` | Jump |
+| `Shift` (hold) | Run |
+| Left click | Shoot web |
+| Right click | Zip to location |
 
-## 🎨 Customization
+Touch controls appear on smaller viewports.
 
-### Adding New Prey Types
+## Scripts
 
-1. Add the type to `PreyType` in `src/lib/types/game.ts`
-2. Add configuration to `PREY_TYPES` in `src/lib/constants/gameConfig.ts`
-3. Create the sprite component in `src/components/game/Prey.tsx`
+| Script | Description |
+| --- | --- |
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Serve production build |
+| `npm run lint` | ESLint |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Node tests under `src/**/*.test.ts` |
+| `npm run doctor` | `react-doctor` check |
 
-### Adding New Power-ups
+## Testing and CI
 
-1. Add the type to `PowerUpType` in `src/lib/types/game.ts`
-2. Add configuration to `POWER_UP_CONFIG` in `src/lib/constants/gameConfig.ts`
-3. Handle the effect in `collectPowerUp` in `src/stores/gameStore.ts`
+CI on `dev` / `main` and PRs: install → lint → typecheck → test → build. No secrets. Tests cover scoring helpers and route utilities.
 
-### Modifying Sounds
+## Deployment
 
-All sounds are procedurally generated in `src/lib/utils/sound.ts`. Adjust `SOUND_CONFIGS` to change frequencies, durations, and waveforms.
+Hosted on Vercel at [spiderdemo.vercel.app](https://spiderdemo.vercel.app/). Client-only; no host env vars required.
 
-## 🗺️ Roadmap
+## Contributing
 
-- [x] Web shooting mechanics
-- [x] Touch controls for mobile
-- [x] Procedural sound effects
-- [x] Multiple prey types with unique behaviors
-- [x] Combo system
-- [x] Power-up system
-- [x] Tutorial system
-- [ ] Level/stage system with unique environments
-- [ ] Boss encounters
-- [ ] Achievements system
-- [ ] Online leaderboards
-- [ ] Multiplayer co-op mode
+1. Work on `dev`.
+2. Run `npm run lint`, `npm run typecheck`, and `npm test` before pushing.
+3. Keep balance tweaks in `src/lib/constants/gameConfig.ts` when possible.
 
-## 🤝 Contributing
+## License
 
-Contributions are welcome! Here's how to get started:
-
-1. **Fork** the repository
-2. **Create** a feature branch
-   ```bash
-   git checkout -b feature/amazing-feature
-   ```
-3. **Make** your changes with clear commit messages
-4. **Test** your changes thoroughly
-   ```bash
-   npm run build
-   ```
-5. **Push** to your fork
-   ```bash
-   git push origin feature/amazing-feature
-   ```
-6. **Open** a Pull Request
-
-### Development Guidelines
-
-- Follow the existing code style (Prettier formatting applied)
-- Use TypeScript strictly—avoid `any` types
-- Keep components focused and composable
-- Add new constants to `gameConfig.ts` instead of hardcoding values
-- Test on both desktop and mobile before submitting
-
-## 📝 License
-
-This project is licensed under the MIT License—see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Sprite artwork created for this project
-- Built with [Next.js](https://nextjs.org/) by Vercel
-- State management by [Zustand](https://github.com/pmndrs/zustand)
-- Animations powered by [Framer Motion](https://www.framer.com/motion/)
-
-## 📧 Contact
-
-- **Email**: info@ignitechannel.com
-- **Project**: [github.com/brown2020/spider](https://github.com/brown2020/spider)
-- **Live Demo**: [spiderdemo.vercel.app](https://spiderdemo.vercel.app/)
-
----
-
-<p align="center">
-  Made with 🕸️ by <a href="https://github.com/brown2020">brown2020</a>
-</p>
+No `LICENSE` file is present in this repository.
