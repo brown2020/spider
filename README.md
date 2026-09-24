@@ -116,4 +116,4 @@ Hosted on Vercel at [spiderdemo.vercel.app](https://spiderdemo.vercel.app/). Cli
 
 ## License
 
-No `LICENSE` file is present in this repository.
+[GNU Affero General Public License v3.0](LICENSE.md) (AGPL-3.0).
