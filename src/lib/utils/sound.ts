@@ -1,6 +1,16 @@
 // Sound effects utility with Web Audio API
 // Creates procedural sounds without requiring audio files
 
+import { readStorageItem, writeStorageItem } from "@/lib/storage";
+
+/** Master volume in 0..1. Non-numeric storage values fall back to the default. */
+export function sanitizeVolume(raw: string | null | undefined): number {
+  if (!raw) return 0.5;
+  const parsed = Number.parseFloat(raw);
+  if (!Number.isFinite(parsed)) return 0.5;
+  return Math.max(0, Math.min(1, parsed));
+}
+
 type SoundType = 
   | 'jump'
   | 'webShoot'
@@ -112,13 +122,10 @@ class SoundManager {
 
   constructor() {
     // Load settings from localStorage
-    if (typeof window !== 'undefined') {
-      const savedEnabled = localStorage.getItem('spiderSoundEnabled');
-      const savedVolume = localStorage.getItem('spiderSoundVolume');
-      
-      this.enabled = savedEnabled !== 'false';
-      this.volume = savedVolume ? parseFloat(savedVolume) : 0.5;
-    }
+    const savedEnabled = readStorageItem('spiderSoundEnabled');
+    const savedVolume = readStorageItem('spiderSoundVolume');
+    if (savedEnabled !== null) this.enabled = savedEnabled !== 'false';
+    if (savedVolume !== null) this.volume = sanitizeVolume(savedVolume);
   }
 
   private init() {
@@ -136,51 +143,54 @@ class SoundManager {
   private createOscillator(config: SoundConfig): void {
     if (!this.audioContext || !this.enabled) return;
 
-    const oscillator = this.audioContext.createOscillator();
-    const gainNode = this.audioContext.createGain();
+    const gain = config.volume * this.volume;
+    if (!Number.isFinite(gain) || !Number.isFinite(config.frequency)) return;
 
-    oscillator.type = config.type;
-    oscillator.frequency.setValueAtTime(config.frequency, this.audioContext.currentTime);
+    try {
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
 
-    // Pitch bend
-    if (config.pitchBend) {
-      oscillator.frequency.linearRampToValueAtTime(
-        config.frequency + config.pitchBend,
-        this.audioContext.currentTime + config.duration
-      );
+      oscillator.type = config.type;
+      oscillator.frequency.setValueAtTime(config.frequency, this.audioContext.currentTime);
+
+      if (config.pitchBend) {
+        oscillator.frequency.linearRampToValueAtTime(
+          config.frequency + config.pitchBend,
+          this.audioContext.currentTime + config.duration
+        );
+      }
+
+      const now = this.audioContext.currentTime;
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(gain, now + config.attack);
+      gainNode.gain.linearRampToValueAtTime(0, now + config.attack + config.decay);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      oscillator.start(now);
+      oscillator.stop(now + config.duration);
+    } catch {
+      // Non-finite audio params throw; ignore so a later timer cannot break the loop.
     }
-
-    // Envelope
-    const now = this.audioContext.currentTime;
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(
-      config.volume * this.volume,
-      now + config.attack
-    );
-    gainNode.gain.linearRampToValueAtTime(
-      0,
-      now + config.attack + config.decay
-    );
-
-    oscillator.connect(gainNode);
-    gainNode.connect(this.audioContext.destination);
-
-    oscillator.start(now);
-    oscillator.stop(now + config.duration);
   }
 
   play(sound: SoundType, options?: { pitchMultiplier?: number; volumeMultiplier?: number }) {
     if (!this.enabled) return;
 
-    this.init();
+    try {
+      this.init();
 
-    // Resume audio context if suspended (browser autoplay policy)
-    if (this.audioContext?.state === 'suspended') {
-      this.audioContext.resume();
-    }
+      // Resume audio context if suspended (browser autoplay policy)
+      if (this.audioContext?.state === 'suspended') {
+        void this.audioContext.resume().catch(() => {
+          // Autoplay rejection should not surface to the game loop.
+        });
+      }
 
-    const config = SOUND_CONFIGS[sound];
-    if (config) {
+      const config = SOUND_CONFIGS[sound];
+      if (!config) return;
+
       const pitchMult = options?.pitchMultiplier ?? 1;
       const volMult = options?.volumeMultiplier ?? 1;
 
@@ -212,6 +222,8 @@ class SoundManager {
           }, 40);
         }
       }
+    } catch {
+      // A failed buffer or a non-finite parameter must not stop the animation loop.
     }
   }
 
@@ -231,13 +243,14 @@ class SoundManager {
 
     notes.slice(0, noteCount).forEach((mult, i) => {
       setTimeout(() => {
+        // createOscillator applies the master volume; do not multiply it twice.
         this.createOscillator({
           frequency: baseFreq * mult,
           duration: 0.15,
           type: 'sine',
           attack: 0.01,
           decay: 0.14,
-          volume: 0.25 * this.volume,
+          volume: 0.25,
         });
       }, i * 60);
     });
@@ -245,16 +258,12 @@ class SoundManager {
 
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('spiderSoundEnabled', String(enabled));
-    }
+    writeStorageItem('spiderSoundEnabled', String(enabled));
   }
 
   setVolume(volume: number) {
-    this.volume = Math.max(0, Math.min(1, volume));
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('spiderSoundVolume', String(this.volume));
-    }
+    this.volume = sanitizeVolume(String(volume));
+    writeStorageItem('spiderSoundVolume', String(this.volume));
   }
 
   isEnabled() {
