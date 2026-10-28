@@ -1,31 +1,33 @@
 # Spider
 
-A fast-paced browser arcade game: control a spider in a night scene, shoot webs to trap prey, zip around the screen, chain combos, and grab power-ups. Fully client-side — no accounts, APIs, or env secrets required.
+A browser arcade game. You play a spider in a night scene: move and jump, shoot webs to slow prey, zip across the screen, chain combos, and pick up power-ups. The game is entirely client-side. There is no account system, no API, and no environment variables.
 
 **Live demo:** [https://spiderdemo.vercel.app](https://spiderdemo.vercel.app/)
 
 ## Features
 
-- **Web hunting** — left-click to shoot webs; trap moths, fireflies, beetles, butterflies, dragonflies, and rare golden moths
-- **Movement** — WASD / arrows, jump (Space), run (Shift), right-click zip-to-cursor; touch joystick + buttons on mobile
-- **Combos & scoring** — chain catches for multipliers; high score saved in `localStorage` (`spiderHighScore`)
-- **Power-ups** — Speed Boost, Web Refill, Prey Magnet, Multi Web, Slow Motion
-- **Progressive difficulty** — spawn and pacing scale with score (see `GAME_CONFIG`)
-- **Atmosphere** — night sky, aurora, particles, screen shake, sprite animation
-- **Audio** — procedural SFX via the Web Audio API (toggle in-game); no audio asset downloads
-- **Tutorial & menus** — onboarding, pause, and game-over flows
-- **About page** — `/about`
+- **Web hunting** — left-click shoots a web. Trapped prey move slower and are easier to catch. Prey types: moth, firefly, beetle, butterfly, dragonfly, and a rare golden moth.
+- **Movement** — WASD or arrows move, including up and down. Space jumps (and double-jumps). Hold Shift to run. Right-click zips toward the cursor.
+- **Touch** — on mobile browsers, a joystick plus jump, web, and zip buttons. The web button aims at the nearest prey.
+- **Combos and score** — quick catches raise a combo multiplier. The best score is stored in the browser under `spiderHighScore`.
+- **Power-ups** — Speed Boost, Web Refill, Prey Magnet, Multi Web, and Slow Motion. Each timed power-up uses its own duration.
+- **Difficulty** — prey speed and spawn rate rise with score, up to a cap in `GAME_CONFIG`.
+- **Round flow** — first-run tutorial, pause, and **End Hunt**, which opens the game-over screen and saves the best score.
+- **Presentation** — night sky, particles, screen shake, and procedural sound through the Web Audio API. Sound can be muted in the HUD.
+- **About** — `/about`.
 
 ## Tech stack
 
-| Layer | Choice |
+| Layer | Package |
 | --- | --- |
-| Framework | Next.js `^16.3.6` (App Router) |
-| UI | React `^19.3.0`, Tailwind CSS `^4.3.3`, Geist fonts |
-| Language | TypeScript `^6` |
-| State | Zustand `^5` (`subscribeWithSelector`) |
-| Tests | Node.js test runner via `tsx` |
-| Lint | ESLint `^10` + `eslint-config-next` |
+| Framework | Next.js `^16.4.3` (App Router) |
+| UI | React `^19.3.1`, React DOM `^19.3.1`, Tailwind CSS `^4.3.3` |
+| Language | TypeScript `^6.0.3` for the compiler API (ESLint and `next build`). `npm run typecheck` runs TypeScript `^7.0.2` via `@typescript/native`. |
+| State | Zustand `^5.0.16` |
+| Tests | Node.js test runner via `tsx` `^4.23.15` |
+| Lint | ESLint `^10.13.0` and `eslint-config-next` `^16.4.3` |
+
+TypeScript 7.0 does not ship a compiler API. `typescript-eslint` and Next.js still import the `typescript` package, which stays on 6.0.3. The `tsc` binary used by `npm run typecheck` is TypeScript 7.
 
 No Firebase, Stripe, or AI dependencies.
 
@@ -38,14 +40,18 @@ src/
     game/              # GameContainer, spider, prey, webs, environment, particles, power-ups
     ui/                # HUD, menus, controls, tutorial, touch UI
   hooks/               # useGameLoop, useSpriteAnimation
-  stores/              # gameStore (tick loop + entities)
+  stores/              # gameStore (tick loop and entities)
   lib/
     constants/         # GAME_CONFIG, PREY_TYPES, POWER_UP_CONFIG, sprites
     types/             # game entity types
     utils/             # particles, sound
-    scoring.ts         # scoring helpers (+ tests)
-public/                # sprites / assets
-docs/                  # architecture / budget notes
+    scoring.ts         # catch points and HUD score labels
+    storage.ts         # safe localStorage helpers
+    inputAxes.ts       # keyboard axis resolution
+public/                # spider sprite
+docs/                  # architecture and budget notes
+spec.md                # behavior as built
+roadmap.md             # next steps and known gaps
 .github/workflows/ci.yml
 ```
 
@@ -53,10 +59,10 @@ docs/                  # architecture / budget notes
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 22
 - npm
 
-### Clone and install
+### Install
 
 ```bash
 git clone https://github.com/brown2020/spider.git
@@ -66,9 +72,18 @@ npm install
 
 ### Environment variables
 
-None required for local or production builds.
+None. Local and production builds do not read environment variables. Do not add secret values to the repo. If a future client variable is introduced, it must be optional at build time and documented here by name only.
 
-### Run locally
+Browser keys, not environment variables:
+
+| Key | Purpose |
+| --- | --- |
+| `spiderHighScore` | Best score |
+| `spiderTutorialComplete` | Tutorial dismissed |
+| `spiderSoundEnabled` | Mute flag |
+| `spiderSoundVolume` | Volume from 0 to 1 |
+
+### Run
 
 ```bash
 npm run dev
@@ -76,17 +91,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### Controls (desktop)
+### Desktop controls
 
 | Input | Action |
 | --- | --- |
 | `W` `A` `S` `D` / arrows | Move |
-| `Space` | Jump |
+| `Space` | Jump, or double-jump while airborne |
 | `Shift` (hold) | Run |
 | Left click | Shoot web |
-| Right click | Zip to location |
-
-Touch controls appear on smaller viewports.
+| Right click | Zip to the cursor |
+| `Esc` | Pause or resume |
 
 ## Scripts
 
@@ -94,25 +108,25 @@ Touch controls appear on smaller viewports.
 | --- | --- |
 | `npm run dev` | Development server |
 | `npm run build` | Production build |
-| `npm start` | Serve production build |
+| `npm start` | Serve the production build |
 | `npm run lint` | ESLint |
-| `npm run typecheck` | `tsc --noEmit` |
+| `npm run typecheck` | `tsc --noEmit` (TypeScript 7) |
 | `npm test` | Node tests under `src/**/*.test.ts` |
 | `npm run doctor` | `react-doctor` check |
 
 ## Testing and CI
 
-CI on `dev` / `main` and PRs: install → lint → typecheck → test → build. No secrets. Tests cover scoring helpers and route utilities.
+GitHub Actions on `dev`, `main`, and pull requests runs install, lint, typecheck, test, and build. The build does not need secrets. Tests cover scoring, storage, input axes, the game store, sound safety, response headers, and the absence of API routes.
 
 ## Deployment
 
-Hosted on Vercel at [spiderdemo.vercel.app](https://spiderdemo.vercel.app/). Client-only; no host env vars required.
+Hosted on Vercel at [spiderdemo.vercel.app](https://spiderdemo.vercel.app/). No host environment variables are required. Response headers (CSP, `X-Frame-Options`, `nosniff`) are set in `next.config.mjs`.
 
 ## Contributing
 
 1. Work on `dev`.
-2. Run `npm run lint`, `npm run typecheck`, and `npm test` before pushing.
-3. Keep balance tweaks in `src/lib/constants/gameConfig.ts` when possible.
+2. Run `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` before pushing.
+3. Keep balance numbers in `src/lib/constants/gameConfig.ts`.
 
 ## License
 
