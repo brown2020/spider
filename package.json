@@ -12,25 +12,25 @@
     "doctor": "npx -y react-doctor@latest . --verbose --yes"
   },
   "dependencies": {
-    "next": "^16.3.6",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "zustand": "^5.0.15"
+    "next": "^16.4.3",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@eslint/compat": "^2.1.1",
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^25.9.8",
+    "@types/node": "^26.6.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "eslint": "^10.11.0",
-    "eslint-config-next": "^16.3.6",
-    "postcss": "^8.5.28",
+    "eslint": "^10.13.0",
+    "eslint-config-next": "^16.4.3",
+    "postcss": "^8.5.32",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3"
   },
   "optionalDependencies": {
-    "@next/swc-linux-x64-gnu": "^16.3.6"
+    "@next/swc-linux-x64-gnu": "^16.4.3"
   }
 }
