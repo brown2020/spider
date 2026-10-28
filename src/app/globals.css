@@ -34,14 +34,6 @@
   }
 }
 
-/* Custom fonts */
-@font-face {
-  font-family: "GameFont";
-  src: url("/fonts/GeistMonoVF.woff") format("woff");
-  font-weight: 100 900;
-  font-display: swap;
-}
-
 /* Atmospheric background gradient */
 .game-background {
   background: radial-gradient(
@@ -300,7 +292,7 @@
 
 /* UI Styling */
 .game-ui {
-  font-family: "GameFont", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 .glass-panel {
@@ -415,7 +407,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 4px;
   padding: 2px 6px;
-  font-family: "GameFont", monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 /* Scrollbar styling */
