@@ -9,6 +9,7 @@ interface MenuPanelsProps {
   onStart: () => void;
   onResume: () => void;
   onRestart: () => void;
+  onEndHunt: () => void;
 }
 
 export const MenuPanels = memo(function MenuPanels({
@@ -16,6 +17,7 @@ export const MenuPanels = memo(function MenuPanels({
   onStart,
   onResume,
   onRestart,
+  onEndHunt,
 }: MenuPanelsProps) {
   const { gamePhase, score, highScore } = gameState;
 
@@ -44,6 +46,7 @@ export const MenuPanels = memo(function MenuPanels({
           onStart={onStart}
           onResume={onResume}
           onRestart={onRestart}
+          onEndHunt={onEndHunt}
         />
         <MenuFooter gamePhase={gamePhase} highScore={highScore} />
       </div>

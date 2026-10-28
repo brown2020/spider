@@ -3,6 +3,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { GAME_CONFIG } from '@/lib/constants/gameConfig';
+import { axesFromKeys, isShiftHeld } from '@/lib/inputAxes';
 
 export function useGameLoop() {
   const gamePhase = useGameStore((state) => state.gameState.gamePhase);
@@ -48,11 +49,17 @@ export function useGameLoop() {
         // Run game tick
         tick();
         
-        // Spawn prey at intervals based on difficulty
-        const spawnInterval = Math.max(
-          GAME_CONFIG.prey.minSpawnRate,
-          GAME_CONFIG.prey.baseSpawnRate / (1 + (difficulty - 1) * GAME_CONFIG.difficulty.spawnRateBonus)
-        );
+        // Spawn prey at intervals based on difficulty. Slow-mo lengthens the interval.
+        const slowScale = useGameStore
+          .getState()
+          .gameState.activePowerUps.some((powerUp) => powerUp.type === 'slowTime')
+          ? GAME_CONFIG.powerUp.effects.slowTime
+          : 1;
+        const spawnInterval =
+          Math.max(
+            GAME_CONFIG.prey.minSpawnRate,
+            GAME_CONFIG.prey.baseSpawnRate / (1 + (difficulty - 1) * GAME_CONFIG.difficulty.spawnRateBonus)
+          ) / (slowScale > 0 ? slowScale : 1);
         
         if (currentTime - lastSpawnTime.current >= spawnInterval) {
           spawnPrey();
@@ -77,7 +84,6 @@ export function useGameLoop() {
 
 export function useControls() {
   const gamePhase = useGameStore((state) => state.gameState.gamePhase);
-  const setVelocity = useGameStore((state) => state.setVelocity);
   const setDirection = useGameStore((state) => state.setDirection);
   const setCrawling = useGameStore((state) => state.setCrawling);
   const jump = useGameStore((state) => state.jump);
@@ -87,153 +93,67 @@ export function useControls() {
   const pauseGame = useGameStore((state) => state.pauseGame);
   const resumeGame = useGameStore((state) => state.resumeGame);
   const setMousePosition = useGameStore((state) => state.setMousePosition);
-  const activePowerUps = useGameStore((state) => state.gameState.activePowerUps);
+  const setInputAxes = useGameStore((state) => state.setInputAxes);
 
   const keysPressed = useRef<Set<string>>(new Set());
-  const targetVelocity = useRef({ x: 0, y: 0 });
 
-  // Calculate speed with power-up bonus
-  const getSpeed = useCallback((isRunning: boolean) => {
-    const hasSpeedBoost = activePowerUps.some((p) => p.type === 'speed');
-    const baseSpeed = isRunning ? GAME_CONFIG.spider.runSpeed : GAME_CONFIG.spider.baseSpeed;
-    return hasSpeedBoost ? baseSpeed * GAME_CONFIG.powerUp.effects.speed : baseSpeed;
-  }, [activePowerUps]);
+  const publishAxes = useCallback((running: boolean) => {
+    const speed = running ? GAME_CONFIG.spider.runSpeed : GAME_CONFIG.spider.baseSpeed;
+    const axes = axesFromKeys(keysPressed.current, speed);
+    setInputAxes(axes);
+    if (axes.x === 0 && axes.y === 0) {
+      setCrawling(false);
+      return;
+    }
+    setCrawling(true);
+    if (Math.abs(axes.x) >= Math.abs(axes.y)) {
+      setDirection(axes.x >= 0 ? 'right' : 'left');
+    } else {
+      setDirection(axes.y > 0 ? 'down' : 'up');
+    }
+  }, [setCrawling, setDirection, setInputAxes]);
 
-  // Momentum-based movement - smoothly interpolate toward target velocity
+  // Drop held keys when the round is no longer live so resume does not keep moving.
   useEffect(() => {
-    if (gamePhase !== 'playing') return;
-
-    const updateMovement = () => {
-      const currentVelocity = useGameStore.getState().gameState.velocity;
-      const isJumping = useGameStore.getState().gameState.isJumping;
-      const acceleration = GAME_CONFIG.movement.acceleration;
-      const deceleration = GAME_CONFIG.movement.deceleration;
-      const airControl = isJumping ? GAME_CONFIG.movement.airControl : 1;
-
-      // Smoothly interpolate X velocity (momentum-based)
-      let newVelX = currentVelocity.x;
-      if (targetVelocity.current.x !== 0) {
-        // Accelerate toward target
-        const diff = targetVelocity.current.x - currentVelocity.x;
-        newVelX += diff * acceleration * airControl;
-      } else {
-        // Decelerate when no input
-        newVelX *= deceleration;
-        if (Math.abs(newVelX) < 0.1) newVelX = 0;
-      }
-
-      // Only update if changed significantly
-      if (Math.abs(newVelX - currentVelocity.x) > 0.01) {
-        setVelocity({ x: newVelX });
-      }
-    };
-
-    const interval = setInterval(updateMovement, 16);
-    return () => clearInterval(interval);
-  }, [gamePhase, setVelocity]);
+    if (gamePhase === 'playing') return;
+    keysPressed.current.clear();
+    setInputAxes({ x: 0, y: 0 });
+    setCrawling(false);
+  }, [gamePhase, setCrawling, setInputAxes]);
 
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (gamePhase !== 'playing' && e.key !== 'Escape') return;
+      if (e.key === 'Escape') {
+        if (gamePhase === 'playing') pauseGame();
+        else if (gamePhase === 'paused') resumeGame();
+        return;
+      }
+      if (gamePhase !== 'playing') return;
 
       const wasPressed = keysPressed.current.has(e.key);
       keysPressed.current.add(e.key);
-      const speed = getSpeed(e.shiftKey);
 
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-          targetVelocity.current.y = -speed;
-          setDirection('up');
-          setCrawling(true);
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-          targetVelocity.current.y = speed;
-          setDirection('down');
-          setCrawling(true);
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-          targetVelocity.current.x = -speed;
-          setDirection('left');
-          setCrawling(true);
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-          targetVelocity.current.x = speed;
-          setDirection('right');
-          setCrawling(true);
-          break;
-        case ' ':
-          e.preventDefault();
-          // Double jump if already jumping and can double jump
-          if (!wasPressed) {
-            const state = useGameStore.getState().gameState;
-            if (state.isJumping && state.canDoubleJump) {
-              doubleJump();
-            } else if (!state.isJumping) {
-              jump();
-            }
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (!wasPressed) {
+          const state = useGameStore.getState().gameState;
+          if (state.isJumping && state.canDoubleJump) {
+            doubleJump();
+          } else if (!state.isJumping) {
+            jump();
           }
-          break;
-        case 'Escape':
-          if (gamePhase === 'playing') {
-            pauseGame();
-          } else if (gamePhase === 'paused') {
-            resumeGame();
-          }
-          break;
+        }
+        return;
       }
+
+      publishAxes(isShiftHeld(keysPressed.current));
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (gamePhase !== 'playing') return;
-
       keysPressed.current.delete(e.key);
-
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'ArrowDown':
-        case 'w':
-        case 'W':
-        case 's':
-        case 'S':
-          if (!keysPressed.current.has('ArrowUp') &&
-              !keysPressed.current.has('ArrowDown') &&
-              !keysPressed.current.has('w') &&
-              !keysPressed.current.has('W') &&
-              !keysPressed.current.has('s') &&
-              !keysPressed.current.has('S')) {
-            targetVelocity.current.y = 0;
-            setVelocity({ y: 0 });
-          }
-          break;
-        case 'ArrowLeft':
-        case 'ArrowRight':
-        case 'a':
-        case 'A':
-        case 'd':
-        case 'D':
-          if (!keysPressed.current.has('ArrowLeft') &&
-              !keysPressed.current.has('ArrowRight') &&
-              !keysPressed.current.has('a') &&
-              !keysPressed.current.has('A') &&
-              !keysPressed.current.has('d') &&
-              !keysPressed.current.has('D')) {
-            targetVelocity.current.x = 0;
-          }
-          break;
-      }
-
-      if (keysPressed.current.size === 0) {
-        setCrawling(false);
-      }
+      if (gamePhase !== 'playing') return;
+      publishAxes(isShiftHeld(keysPressed.current));
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -243,7 +163,7 @@ export function useControls() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [gamePhase, getSpeed, setVelocity, setDirection, setCrawling, jump, doubleJump, pauseGame, resumeGame]);
+  }, [gamePhase, publishAxes, jump, doubleJump, pauseGame, resumeGame]);
   
   // Mouse controls
   useEffect(() => {

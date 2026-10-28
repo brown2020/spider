@@ -11,13 +11,12 @@ export const TouchControls = memo(function TouchControls() {
   const joystickRef = useRef<HTMLDivElement>(null);
   const joystickCenter = useRef({ x: 0, y: 0 });
 
-  const setVelocity = useGameStore((state) => state.setVelocity);
+  const setInputAxes = useGameStore((state) => state.setInputAxes);
   const setDirection = useGameStore((state) => state.setDirection);
   const setCrawling = useGameStore((state) => state.setCrawling);
   const jump = useGameStore((state) => state.jump);
   const shootWeb = useGameStore((state) => state.shootWeb);
   const zipTo = useGameStore((state) => state.zipTo);
-  const gameState = useGameStore((state) => state.gameState);
 
   useEffect(() => {
     if (!joystickRef.current) return;
@@ -65,38 +64,67 @@ export const TouchControls = memo(function TouchControls() {
       const normalizedY = y / maxRadius;
       const speed = GAME_CONFIG.spider.baseSpeed;
       if (Math.abs(normalizedX) > 0.1 || Math.abs(normalizedY) > 0.1) {
-        setVelocity({ x: normalizedX * speed, y: normalizedY * speed });
+        setInputAxes({ x: normalizedX * speed, y: normalizedY * speed });
         setCrawling(true);
         if (Math.abs(normalizedX) > Math.abs(normalizedY)) {
           setDirection(normalizedX > 0 ? "right" : "left");
         } else {
           setDirection(normalizedY > 0 ? "down" : "up");
         }
+      } else {
+        setInputAxes({ x: 0, y: 0 });
+        setCrawling(false);
       }
     },
-    [joystickActive, setVelocity, setCrawling, setDirection]
+    [joystickActive, setInputAxes, setCrawling, setDirection]
   );
 
   const handleJoystickEnd = useCallback(() => {
     setJoystickActive(false);
     setJoystickPos({ x: 0, y: 0 });
-    setVelocity({ x: 0, y: 0 });
+    // Release the stick only. Zeroing velocity here cancels a jump.
+    setInputAxes({ x: 0, y: 0 });
     setCrawling(false);
-  }, [setVelocity, setCrawling]);
+  }, [setInputAxes, setCrawling]);
 
   const handleJump = useCallback(() => {
     jump();
   }, [jump]);
 
   const handleShootWeb = useCallback(() => {
+    const { gameState, preyList } = useGameStore.getState();
+    let nearest = null as { x: number; y: number } | null;
+    let nearestDistance = Infinity;
+    for (const prey of preyList) {
+      const distance = Math.hypot(
+        prey.position.x - gameState.position.x,
+        prey.position.y - gameState.position.y
+      );
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearest = prey.position;
+      }
+    }
+    if (nearest) {
+      shootWeb(nearest);
+      return;
+    }
+    const zipDistance = 200;
+    const offsets: Record<string, { x: number; y: number }> = {
+      right: { x: zipDistance, y: 0 },
+      left: { x: -zipDistance, y: 0 },
+      up: { x: 0, y: -zipDistance },
+      down: { x: 0, y: zipDistance },
+    };
+    const offset = offsets[gameState.direction] ?? { x: zipDistance, y: 0 };
     shootWeb({
-      x: window.innerWidth * 0.7,
-      y: window.innerHeight * 0.4,
+      x: gameState.position.x + offset.x,
+      y: gameState.position.y + offset.y,
     });
   }, [shootWeb]);
 
   const handleZip = useCallback(() => {
-    const { position, direction } = gameState;
+    const { position, direction } = useGameStore.getState().gameState;
     const zipDistance = 200;
     const offsets: Record<string, { x: number; y: number }> = {
       right: { x: zipDistance, y: 0 },
@@ -106,7 +134,7 @@ export const TouchControls = memo(function TouchControls() {
     };
     const offset = offsets[direction] ?? { x: 0, y: 0 };
     zipTo({ x: position.x + offset.x, y: position.y + offset.y });
-  }, [gameState, zipTo]);
+  }, [zipTo]);
 
   return (
     <div className="fixed inset-0 pointer-events-none z-[100]">

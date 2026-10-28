@@ -3,6 +3,7 @@
 import { memo, useState, useEffect, useCallback, useRef } from "react";
 import { GameState, ActivePowerUp } from "@/lib/types/game";
 import { GAME_CONFIG, POWER_UP_CONFIG } from "@/lib/constants/gameConfig";
+import { scoreHudLabel } from "@/lib/scoring";
 import { soundManager, playSound } from "@/lib/utils/sound";
 import { useGameStore } from "@/stores/gameStore";
 
@@ -120,12 +121,12 @@ const HUD = memo(function HUD({ gameState }: HUDProps) {
             >
               {formatScore(displayScore)}
             </div>
-            {score > 0 && score === highScore && (
+            {scoreHudLabel(score, highScore) === "new" && (
               <div className="text-xs text-yellow-400 mt-1 high-score-new">
                 ★ NEW HIGH SCORE
               </div>
             )}
-            {score > 0 && score < highScore && (
+            {scoreHudLabel(score, highScore) === "best" && (
               <div className="text-xs text-gray-500 mt-1">
                 Best: {formatScore(highScore)}
               </div>
@@ -243,7 +244,8 @@ function PowerUpIndicator({ powerUp }: PowerUpIndicatorProps) {
   const config = POWER_UP_CONFIG[powerUp.type];
   const frameTime = useGameStore((state) => state.frameTime);
   const remaining = Math.max(0, powerUp.expiresAt - frameTime);
-  const progress = remaining / GAME_CONFIG.powerUp.duration;
+  const duration = config.duration > 0 ? config.duration : GAME_CONFIG.powerUp.duration;
+  const progress = duration > 0 ? remaining / duration : 0;
 
   return (
     <div

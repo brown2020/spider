@@ -17,3 +17,13 @@ export function formatScore(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
   return n.toString();
 }
+
+/** HUD label for the live score versus the best score. */
+export function scoreHudLabel(
+  score: number,
+  highScore: number
+): "new" | "best" | "none" {
+  if (!(score > 0) || !Number.isFinite(score)) return "none";
+  if (!Number.isFinite(highScore) || score >= highScore) return "new";
+  return "best";
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useEffect, useCallback, useRef } from 'react';
+import { readStorageItem, writeStorageItem } from '@/lib/storage';
 
 interface TutorialProps {
   isPlaying: boolean;
@@ -79,8 +80,7 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
   const [hasSeenTutorial] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return !!localStorage.getItem('spiderTutorialComplete');
+    return !!readStorageItem('spiderTutorialComplete');
   });
 
   // Check if tutorial should show
@@ -105,14 +105,14 @@ const Tutorial = memo(function Tutorial({ isPlaying, onComplete }: TutorialProps
       setCurrentStep(prev => prev + 1);
     } else {
       // Complete tutorial
-      localStorage.setItem('spiderTutorialComplete', 'true');
+      writeStorageItem('spiderTutorialComplete', 'true');
       setIsVisible(false);
       onComplete();
     }
   }, [currentStep, onComplete]);
   
   const handleSkip = useCallback(() => {
-    localStorage.setItem('spiderTutorialComplete', 'true');
+    writeStorageItem('spiderTutorialComplete', 'true');
     setIsVisible(false);
     onComplete();
   }, [onComplete]);

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { useGameLoop, useControls } from '@/hooks/useGameLoop';
 import { GAME_CONFIG } from '@/lib/constants/gameConfig';
+import { readStorageItem } from '@/lib/storage';
 
 import Environment from './Environment';
 import Spider from './Spider';
@@ -33,6 +34,8 @@ export default function GameContainer() {
   const pauseGame = useGameStore((state) => state.pauseGame);
   const resumeGame = useGameStore((state) => state.resumeGame);
   const resetGame = useGameStore((state) => state.resetGame);
+  const endGame = useGameStore((state) => state.endGame);
+  const commitHighScore = useGameStore((state) => state.commitHighScore);
   
   // Initialize game loops and controls
   useGameLoop();
@@ -49,7 +52,7 @@ export default function GameContainer() {
   // Check if tutorial should show on first play
   useEffect(() => {
     if (gameState.gamePhase === 'playing') {
-      const hasSeenTutorial = localStorage.getItem('spiderTutorialComplete');
+      const hasSeenTutorial = readStorageItem('spiderTutorialComplete');
       if (!hasSeenTutorial) {
         requestAnimationFrame(() => {
           setShowTutorial(true);
@@ -125,9 +128,11 @@ export default function GameContainer() {
         onStart={startGame}
         onResume={resumeGame}
         onRestart={() => {
+          commitHighScore();
           resetGame();
           startGame();
         }}
+        onEndHunt={endGame}
       />
       
       {/* Tutorial overlay */}

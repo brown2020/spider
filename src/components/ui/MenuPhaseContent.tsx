@@ -111,11 +111,13 @@ export const MenuActions = memo(function MenuActions({
   onStart,
   onResume,
   onRestart,
+  onEndHunt,
 }: {
   gamePhase: GameState["gamePhase"];
   onStart: () => void;
   onResume: () => void;
   onRestart: () => void;
+  onEndHunt: () => void;
 }) {
   return (
     <div className="space-y-3">
@@ -149,6 +151,17 @@ export const MenuActions = memo(function MenuActions({
             }}
           >
             Restart
+          </button>
+          <button
+            type="button"
+            onClick={onEndHunt}
+            className="w-full py-3 px-6 rounded-xl font-semibold transition-colors duration-300 hover:bg-white/10"
+            style={{
+              border: "1px solid rgba(248, 113, 113, 0.35)",
+              color: "rgba(254, 202, 202, 0.9)",
+            }}
+          >
+            End Hunt
           </button>
         </>
       )}

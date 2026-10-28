@@ -12,6 +12,7 @@ interface MenuProps {
   onStart: () => void;
   onResume: () => void;
   onRestart: () => void;
+  onEndHunt: () => void;
 }
 
 const Menu = memo(function Menu({
@@ -19,6 +20,7 @@ const Menu = memo(function Menu({
   onStart,
   onResume,
   onRestart,
+  onEndHunt,
 }: MenuProps) {
   const { gamePhase } = gameState;
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -73,6 +75,7 @@ const Menu = memo(function Menu({
         onStart={onStart}
         onResume={onResume}
         onRestart={onRestart}
+        onEndHunt={onEndHunt}
       />
     </div>
   );

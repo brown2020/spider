@@ -12,7 +12,9 @@ import {
   PreyType,
   PowerUpType,
 } from "@/lib/types/game";
-import { GAME_CONFIG, PREY_TYPES } from "@/lib/constants/gameConfig";
+import { GAME_CONFIG, POWER_UP_CONFIG, PREY_TYPES } from "@/lib/constants/gameConfig";
+import { preyCatchPoints } from "@/lib/scoring";
+import { bestScore, readStoredHighScore, writeStoredHighScore } from "@/lib/storage";
 import { playSound, playSoundWithCombo } from "@/lib/utils/sound";
 import {
   createParticles,
@@ -26,6 +28,48 @@ import {
 // Utility function for unique IDs
 const generateId = (): string =>
   `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+const effectTimers: {
+  shake: ReturnType<typeof setTimeout> | null;
+  flash: ReturnType<typeof setTimeout> | null;
+} = { shake: null, flash: null };
+
+function clearEffectTimers(): void {
+  if (effectTimers.shake) clearTimeout(effectTimers.shake);
+  if (effectTimers.flash) clearTimeout(effectTimers.flash);
+  effectTimers.shake = null;
+  effectTimers.flash = null;
+}
+
+function armEffectTimer(
+  key: "shake" | "flash",
+  delayMs: number,
+  reset: () => void
+): void {
+  if (effectTimers[key]) clearTimeout(effectTimers[key]);
+  effectTimers[key] = setTimeout(() => {
+    effectTimers[key] = null;
+    reset();
+  }, delayMs);
+}
+
+function preySpeedScale(difficulty: number): number {
+  return 1 + (difficulty - 1) * GAME_CONFIG.difficulty.preySpeedBonus;
+}
+
+function slowMotionScale(active: { type: string }[]): number {
+  const slow = active.some((powerUp) => powerUp.type === "slowTime");
+  return slow ? GAME_CONFIG.powerUp.effects.slowTime : 1;
+}
+
+function regenerateWebEnergy(current: number): number {
+  const safe = Number.isFinite(current) ? current : 0;
+  if (safe >= GAME_CONFIG.web.energy.max) return GAME_CONFIG.web.energy.max;
+  return Math.min(
+    safe + GAME_CONFIG.web.energy.regenRate,
+    GAME_CONFIG.web.energy.max
+  );
+}
 
 // Get random prey type based on spawn weights
 const getRandomPreyType = (): PreyType => {
@@ -101,6 +145,11 @@ interface GameStore {
   // Actions - State Updates
   setMousePosition: (position: Vector2D) => void;
   setDimensions: (dimensions: { width: number; height: number }) => void;
+  /** Desired velocity from keyboard or the touch stick. Tick is the only writer of velocity. */
+  inputAxes: Vector2D;
+  setInputAxes: (axes: Vector2D) => void;
+  /** Persist max(score, highScore) in memory and localStorage. */
+  commitHighScore: () => number;
   tick: () => void; // Main game loop tick
 }
 
@@ -116,10 +165,7 @@ const getInitialGameState = (): GameState => ({
   isOnWall: false,
   canDoubleJump: true,
   score: 0,
-  highScore:
-    typeof window !== "undefined"
-      ? parseInt(localStorage.getItem("spiderHighScore") || "0", 10)
-      : 0,
+  highScore: readStoredHighScore(),
   webEnergy: GAME_CONFIG.web.energy.max,
   combo: 0,
   comboTimer: 0,
@@ -146,10 +192,12 @@ export const useGameStore = create<GameStore>()(
     mousePosition: { x: 0, y: 0 },
     frameTime: Date.now(),
     dimensions: { width: 1000, height: 600 },
+    inputAxes: { x: 0, y: 0 },
 
     // Game Flow Actions
     startGame: () => {
       const { dimensions } = get();
+      clearEffectTimers();
       set({
         gameState: {
           ...getInitialGameState(),
@@ -178,14 +226,9 @@ export const useGameStore = create<GameStore>()(
     },
 
     endGame: () => {
-      const { gameState } = get();
-      const newHighScore = Math.max(gameState.score, gameState.highScore);
-
+      const newHighScore = get().commitHighScore();
+      clearEffectTimers();
       playSound("gameOver");
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("spiderHighScore", newHighScore.toString());
-      }
 
       set((state) => ({
         gameState: {
@@ -197,6 +240,7 @@ export const useGameStore = create<GameStore>()(
     },
 
     resetGame: () => {
+      clearEffectTimers();
       set({
         gameState: {
           ...getInitialGameState(),
@@ -471,10 +515,16 @@ export const useGameStore = create<GameStore>()(
 
     updatePrey: () => {
       const { gameState, webs, dimensions } = get();
+      const speedScale = preySpeedScale(gameState.difficulty);
+      const motionScale = slowMotionScale(gameState.activePowerUps);
+      const hasMagnet = gameState.activePowerUps.some(
+        (powerUp) => powerUp.type === "magnet"
+      );
 
       set((state) => ({
         preyList: state.preyList.map((prey) => {
           const config = PREY_TYPES[prey.type];
+          const scaledSpeed = config.baseSpeed * speedScale;
           let newVelocity = { ...prey.velocity };
           let newPosition = { ...prey.position };
 
@@ -486,8 +536,8 @@ export const useGameStore = create<GameStore>()(
                 ...prey,
                 isTrapped: false,
                 velocity: {
-                  x: (Math.random() - 0.5) * config.baseSpeed * 2,
-                  y: (Math.random() - 0.5) * config.baseSpeed * 2,
+                  x: (Math.random() - 0.5) * scaledSpeed * 2,
+                  y: (Math.random() - 0.5) * scaledSpeed * 2,
                 },
               };
             }
@@ -498,8 +548,8 @@ export const useGameStore = create<GameStore>()(
               y: prey.velocity.y * 0.95 + (Math.random() - 0.5) * 0.2,
             };
             newPosition = {
-              x: prey.position.x + newVelocity.x * 0.3,
-              y: prey.position.y + newVelocity.y * 0.3,
+              x: prey.position.x + newVelocity.x * 0.3 * motionScale,
+              y: prey.position.y + newVelocity.y * 0.3 * motionScale,
             };
           } else {
             // Apply behavior
@@ -514,7 +564,7 @@ export const useGameStore = create<GameStore>()(
                 prey.position.y - gameState.position.y,
                 prey.position.x - gameState.position.x
               );
-              const fleeSpeed = config.baseSpeed * 1.8;
+              const fleeSpeed = scaledSpeed * 1.8;
               newVelocity = {
                 x: Math.cos(fleeAngle) * fleeSpeed,
                 y: Math.sin(fleeAngle) * fleeSpeed,
@@ -526,8 +576,8 @@ export const useGameStore = create<GameStore>()(
                   if (Math.random() < 0.1) {
                     const angle = Math.random() * Math.PI * 2;
                     newVelocity = {
-                      x: Math.cos(angle) * config.baseSpeed,
-                      y: Math.sin(angle) * config.baseSpeed,
+                      x: Math.cos(angle) * scaledSpeed,
+                      y: Math.sin(angle) * scaledSpeed,
                     };
                   }
                   break;
@@ -535,23 +585,39 @@ export const useGameStore = create<GameStore>()(
                   newVelocity.y +=
                     Math.sin(Date.now() * 0.005 + prey.wingPhase) * 0.3;
                   break;
-                case "fast":
-                  // Maintain speed
+                case "fast": {
+                  // Maintain the difficulty-scaled cruise speed
                   const currentSpeed = Math.hypot(newVelocity.x, newVelocity.y);
-                  if (currentSpeed < config.baseSpeed) {
+                  if (currentSpeed < scaledSpeed) {
                     const angle = Math.atan2(newVelocity.y, newVelocity.x);
                     newVelocity = {
-                      x: Math.cos(angle) * config.baseSpeed,
-                      y: Math.sin(angle) * config.baseSpeed,
+                      x: Math.cos(angle) * scaledSpeed,
+                      y: Math.sin(angle) * scaledSpeed,
                     };
                   }
                   break;
+                }
               }
             }
 
+            // Magnet pull is applied after flee so the larger flee radius cannot erase it.
+            if (
+              hasMagnet &&
+              distanceToSpider < GAME_CONFIG.powerUp.effects.magnet
+            ) {
+              const pullAngle = Math.atan2(
+                gameState.position.y - prey.position.y,
+                gameState.position.x - prey.position.x
+              );
+              newVelocity = {
+                x: newVelocity.x + Math.cos(pullAngle) * 0.5,
+                y: newVelocity.y + Math.sin(pullAngle) * 0.5,
+              };
+            }
+
             newPosition = {
-              x: prey.position.x + newVelocity.x,
-              y: prey.position.y + newVelocity.y,
+              x: prey.position.x + newVelocity.x * motionScale,
+              y: prey.position.y + newVelocity.y * motionScale,
             };
 
             // Bounce off walls
@@ -624,9 +690,11 @@ export const useGameStore = create<GameStore>()(
         playSound("catch");
       }
 
-      // Calculate score with combo
-      const comboMultiplier = 1 + (newCombo - 1) * 0.25;
-      const points = Math.floor(config.value * comboMultiplier);
+      const points = preyCatchPoints(
+        prey.type,
+        newCombo,
+        GAME_CONFIG.combo.bonusPerLevel
+      );
 
       // Calculate direction from spider to prey for directional effects
       const catchDirection = {
@@ -689,8 +757,11 @@ export const useGameStore = create<GameStore>()(
         get().spawnPowerUp(prey.position);
       }
 
-      // Update difficulty
-      const newScore = gameState.score + points;
+      // Update difficulty and persist a new best as soon as it happens.
+      const safeScore = Number.isFinite(gameState.score) ? gameState.score : 0;
+      const newScore = safeScore + points;
+      const newHighScore = bestScore(gameState.highScore, newScore);
+      writeStoredHighScore(newHighScore);
       const newDifficulty = Math.min(
         1 + newScore * GAME_CONFIG.difficulty.scaleRate,
         GAME_CONFIG.difficulty.maxMultiplier
@@ -701,6 +772,7 @@ export const useGameStore = create<GameStore>()(
         gameState: {
           ...state.gameState,
           score: newScore,
+          highScore: newHighScore,
           combo: newCombo,
           comboTimer: GAME_CONFIG.combo.duration,
           lastCatchTime: frameTime,
@@ -797,12 +869,11 @@ export const useGameStore = create<GameStore>()(
         },
       }));
 
-      // Reset after animation
-      setTimeout(() => {
+      armEffectTimer("shake", GAME_CONFIG.effects.screenShakeDuration, () => {
         set((state) => ({
           gameState: { ...state.gameState, screenShake: 0, screenShakeDirection: { x: 0, y: 0 } },
         }));
-      }, GAME_CONFIG.effects.screenShakeDuration);
+      });
     },
 
     triggerScreenFlash: (color: string, intensity: number) => {
@@ -813,12 +884,11 @@ export const useGameStore = create<GameStore>()(
         },
       }));
 
-      // Reset after flash duration
-      setTimeout(() => {
+      armEffectTimer("flash", GAME_CONFIG.effects.screenFlashDuration, () => {
         set((state) => ({
           gameState: { ...state.gameState, screenFlash: null },
         }));
-      }, GAME_CONFIG.effects.screenFlashDuration);
+      });
     },
 
     triggerFreezeFrame: (duration: number) => {
@@ -881,7 +951,7 @@ export const useGameStore = create<GameStore>()(
                 ),
                 {
                   type: powerUp.type,
-                  expiresAt: frameTime + GAME_CONFIG.powerUp.duration,
+                  expiresAt: frameTime + POWER_UP_CONFIG[powerUp.type].duration,
                 },
               ],
             },
@@ -942,6 +1012,22 @@ export const useGameStore = create<GameStore>()(
       set({ dimensions });
     },
 
+    setInputAxes: (axes) => {
+      set({ inputAxes: { x: axes.x, y: axes.y } });
+    },
+
+    commitHighScore: () => {
+      const { gameState } = get();
+      const high = bestScore(gameState.highScore, gameState.score);
+      writeStoredHighScore(high);
+      if (high !== gameState.highScore) {
+        set((state) => ({
+          gameState: { ...state.gameState, highScore: high },
+        }));
+      }
+      return high;
+    },
+
     // Main game tick
     tick: () => {
       const { gameState, dimensions, preyList } = get();
@@ -962,7 +1048,7 @@ export const useGameStore = create<GameStore>()(
       // Update frame time once per tick
       const now = Date.now();
 
-      // Check speed power-up
+      // Speed boost is applied once, here, for every control source.
       const hasSpeedBoost = gameState.activePowerUps.some(
         (p) => p.type === "speed"
       );
@@ -970,13 +1056,40 @@ export const useGameStore = create<GameStore>()(
         ? GAME_CONFIG.powerUp.effects.speed
         : 1;
 
-      // Update position based on velocity
-      let newX = gameState.position.x + gameState.velocity.x * speedMultiplier;
-      let newY = gameState.position.y + gameState.velocity.y;
-
       let newVelocity = { ...gameState.velocity };
       let isJumping = gameState.isJumping;
       let isZipping = gameState.isZipping;
+
+      // Input acceleration lives in the tick so it cannot fight zip drag.
+      if (!isZipping) {
+        const { inputAxes } = get();
+        const acceleration = GAME_CONFIG.movement.acceleration;
+        const deceleration = GAME_CONFIG.movement.deceleration;
+        const airControl = isJumping ? GAME_CONFIG.movement.airControl : 1;
+
+        if (inputAxes.x !== 0) {
+          newVelocity.x += (inputAxes.x - newVelocity.x) * acceleration * airControl;
+        } else {
+          newVelocity.x *= deceleration;
+          if (Math.abs(newVelocity.x) < 0.1) newVelocity.x = 0;
+        }
+
+        if (inputAxes.y !== 0) {
+          newVelocity.y += (inputAxes.y - newVelocity.y) * acceleration * airControl;
+        } else if (!isJumping) {
+          const onGround =
+            gameState.position.y >=
+            dimensions.height - GAME_CONFIG.physics.groundHeight - 0.5;
+          if (onGround) {
+            newVelocity.y *= deceleration;
+            if (Math.abs(newVelocity.y) < 0.1) newVelocity.y = 0;
+          }
+        }
+      }
+
+      // Position uses the steered velocity. Physics below updates the next frame.
+      let newX = gameState.position.x + newVelocity.x * speedMultiplier;
+      let newY = gameState.position.y + newVelocity.y;
 
       // Apply physics
       if (isZipping) {
@@ -1041,21 +1154,8 @@ export const useGameStore = create<GameStore>()(
         newVelocity = { x: 0, y: 0 };
       }
 
-      // Regenerate web energy
-      let webEnergy = gameState.webEnergy;
-      if (webEnergy < GAME_CONFIG.web.energy.max) {
-        webEnergy = Math.min(
-          webEnergy + GAME_CONFIG.web.energy.regenRate,
-          GAME_CONFIG.web.energy.max
-        );
-      }
-
-      // Check prey collision
+      // Check prey collision. Magnet pull is applied later in updatePrey.
       const catchRadius = GAME_CONFIG.spider.catchRadius;
-      const hasMagnet = gameState.activePowerUps.some(
-        (p) => p.type === "magnet"
-      );
-      const magnetRadius = GAME_CONFIG.powerUp.effects.magnet;
 
       for (const prey of preyList) {
         const distance = Math.hypot(
@@ -1065,14 +1165,6 @@ export const useGameStore = create<GameStore>()(
 
         if (distance < catchRadius) {
           get().catchPrey(prey.id);
-        } else if (hasMagnet && distance < magnetRadius) {
-          // Pull prey toward spider
-          const angle = Math.atan2(
-            newY - prey.position.y,
-            newX - prey.position.x
-          );
-          prey.velocity.x += Math.cos(angle) * 0.5;
-          prey.velocity.y += Math.sin(angle) * 0.5;
         }
       }
 
@@ -1109,7 +1201,8 @@ export const useGameStore = create<GameStore>()(
           velocity: newVelocity,
           isJumping,
           isZipping,
-          webEnergy,
+          // Regen from the latest energy so a pickup collected this tick is kept.
+          webEnergy: regenerateWebEnergy(state.gameState.webEnergy),
         },
       }));
 
