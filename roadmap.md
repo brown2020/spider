@@ -28,6 +28,7 @@ Punchlist for Spider after the current `dev` build. There are no open GitHub iss
 
 ## Done recently
 
+- Dependencies refreshed to current releases (ESLint 10.14). `minimatch` is overridden to 11.0.4. The `typescript` package stays on 6.0.3 because 7.0.2 still has no compiler API.
 - High score persistence, End Hunt, and game over.
 - Web Refill, magnet, slow motion, difficulty scaling, and combo scoring.
 - Vertical movement, zip that is not cancelled by walking, and a single speed-boost multiplier.

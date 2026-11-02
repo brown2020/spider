@@ -53,6 +53,66 @@ function reset(highScore = 0) {
 }
 
 describe("game store fixes", () => {
+  it("starts a hunt, traps prey in a web, and scores the catch", () => {
+    memory.set("spiderHighScore", "0");
+    useGameStore.getState().resetGame();
+    useGameStore.getState().setDimensions({ width: 1000, height: 600 });
+    useGameStore.getState().startGame();
+    assert.equal(useGameStore.getState().gameState.gamePhase, "playing");
+
+    const preyPos = { x: 400, y: 300 };
+    useGameStore.setState((state) => ({
+      gameState: {
+        ...state.gameState,
+        position: { x: 100, y: 300 },
+        velocity: { x: 0, y: 0 },
+        isJumping: false,
+        isZipping: false,
+        webEnergy: GAME_CONFIG.web.energy.max,
+        score: 0,
+        combo: 0,
+      },
+      webs: [],
+      preyList: [
+        {
+          id: "hunt-moth",
+          type: "moth",
+          position: preyPos,
+          velocity: { x: 0, y: 0 },
+          isTrapped: false,
+          angle: 0,
+          wingPhase: 0,
+        },
+      ],
+    }));
+
+    useGameStore.getState().shootWeb({ x: 700, y: 300 });
+    const afterShot = useGameStore.getState();
+    assert.equal(afterShot.webs.length, 1);
+    assert.ok(afterShot.gameState.webEnergy < GAME_CONFIG.web.energy.max);
+
+    useGameStore.getState().updatePrey();
+    assert.equal(useGameStore.getState().preyList[0]?.isTrapped, true);
+
+    useGameStore.setState((state) => ({
+      gameState: {
+        ...state.gameState,
+        position: { ...preyPos },
+        velocity: { x: 0, y: 0 },
+      },
+    }));
+    useGameStore.getState().tick();
+    const afterCatch = useGameStore.getState();
+    assert.equal(afterCatch.preyList.length, 0);
+    assert.ok(afterCatch.gameState.score > 0);
+
+    const score = afterCatch.gameState.score;
+    useGameStore.getState().endGame();
+    assert.equal(useGameStore.getState().gameState.gamePhase, "gameOver");
+    assert.equal(useGameStore.getState().gameState.highScore, score);
+    assert.equal(memory.get("spiderHighScore"), String(score));
+  });
+
   it("keeps web energy granted by a refill pickup", () => {
     const groundY = reset();
     useGameStore.setState({
