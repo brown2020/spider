@@ -20,12 +20,12 @@ A browser arcade game. You play a spider in a night scene: move and jump, shoot 
 
 | Layer | Package |
 | --- | --- |
-| Framework | Next.js `^16.4.3` (App Router) |
-| UI | React `^19.3.1`, React DOM `^19.3.1`, Tailwind CSS `^4.3.3` |
+| Framework | Next.js `^16.4.5` (App Router) |
+| UI | React `^19.3.1`, React DOM `^19.3.1`, Tailwind CSS `^4.3.4` |
 | Language | TypeScript `^6.0.3` for the compiler API (ESLint and `next build`). `npm run typecheck` runs TypeScript `^7.0.2` via `@typescript/native`. |
 | State | Zustand `^5.0.16` |
 | Tests | Node.js test runner via `tsx` `^4.23.15` |
-| Lint | ESLint `^10.14.0` and `eslint-config-next` `^16.4.3` |
+| Lint | ESLint `^10.14.0` and `eslint-config-next` `^16.4.5` |
 
 TypeScript 7.0 does not ship a compiler API (`typescript@7` only exports the compiler binary and unstable APIs). `typescript-eslint` and Next.js still import the `typescript` package, which stays on 6.0.3, the newest 6.x release. The `tsc` binary used by `npm run typecheck` is TypeScript 7.
 
